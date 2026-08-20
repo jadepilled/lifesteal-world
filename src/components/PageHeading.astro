@@ -1,19 +1,15 @@
 ---
 interface Props {
-  route: string;
   title: string;
-  intro?: string;
   status?: string;
 }
 
-const { route, title, intro, status = 'READY' } = Astro.props;
+const { title, status = 'READY' } = Astro.props;
 ---
 
 <header class="page-heading">
-  <div class="terminal-path" aria-hidden="true">C:\LIFESTEAL\{route}&gt;</div>
   <div class="page-heading__line">
     <h1>{title}</h1>
     <span class="status-chip">[{status}]</span>
   </div>
-  {intro && <p>{intro}</p>}
 </header>

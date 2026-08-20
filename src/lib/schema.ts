@@ -10,6 +10,14 @@ export const imageSchema = z.object({
   focalPoint: z.string().optional(),
 });
 
+export const paletteSchema = z.object({
+  background: z.string().regex(/^#[0-9a-f]{6}$/i),
+  surface: z.string().regex(/^#[0-9a-f]{6}$/i),
+  foreground: z.string().regex(/^#[0-9a-f]{6}$/i),
+  accent: z.string().regex(/^#[0-9a-f]{6}$/i),
+  glow: z.string().regex(/^#[0-9a-f]{6}$/i),
+});
+
 export const artistSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
   slug: z.string().regex(/^[a-z0-9-]+$/),
@@ -20,6 +28,7 @@ export const artistSchema = z.object({
   biography: z.string().min(40),
   portrait: imageSchema,
   mark: imageSchema.optional(),
+  palette: paletteSchema,
   spotifyArtistId: z.string().nullable(),
   soundcloudProfileUrl: httpUrl.nullable(),
   links: z.array(
@@ -29,14 +38,6 @@ export const artistSchema = z.object({
       url: httpUrl,
     }),
   ),
-});
-
-export const paletteSchema = z.object({
-  background: z.string().regex(/^#[0-9a-f]{6}$/i),
-  surface: z.string().regex(/^#[0-9a-f]{6}$/i),
-  foreground: z.string().regex(/^#[0-9a-f]{6}$/i),
-  accent: z.string().regex(/^#[0-9a-f]{6}$/i),
-  glow: z.string().regex(/^#[0-9a-f]{6}$/i),
 });
 
 export const platformLinkSchema = z.object({

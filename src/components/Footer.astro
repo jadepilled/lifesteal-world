@@ -1,5 +1,11 @@
 ---
 import { withBase } from '../lib/base';
+
+interface Props {
+  showRule?: boolean;
+}
+
+const { showRule = true } = Astro.props;
 ---
 
 <footer class="site-footer" itemscope itemtype="https://schema.org/Organization">
@@ -7,7 +13,7 @@ import { withBase } from '../lib/base';
   <meta itemprop="foundingDate" content="2021" />
   <meta itemprop="address" content="Naarm, Australia" />
 
-  <div class="site-footer__rule" aria-hidden="true"><span>EOF</span></div>
+  {showRule && <div class="site-footer__rule" aria-hidden="true" />}
   <div class="site-footer__content">
     <p>
       LIFESTEAL acknowledges the rightful owners and traditional caretakers of all land upon which

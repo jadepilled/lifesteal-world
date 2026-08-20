@@ -1,21 +1,24 @@
+---
+const logoText = String.raw`    ___ ____          __             __
+   / (_) __/__  _____/ /____  ____ _/ /
+  / / / /_/ _ \/ ___/ __/ _ \/ __ '/ /
+ / / / __/  __(__  ) /_/  __/ /_/ / /
+/_/_/_/  \___/____/\__/\___/\__,_/_/`;
+---
+
 <div class="ascii-stage" data-ascii-stage>
   <div class="ascii-stage__status" aria-hidden="true">
-    <span>SYS.LABEL / LIFESTEAL</span>
-    <span>2021—2026</span>
+    <span>LIFESTEAL // HOME</span>
+    <span>FOUNDED 2021</span>
   </div>
   <canvas class="ascii-stage__canvas" data-drip-canvas aria-hidden="true"></canvas>
   <pre
     class="ascii-logo"
     aria-hidden="true"
-    data-ascii-logo>
-    ___ ____          __             __
-   / (_) __/__  _____/ /____  ____ _/ /
-  / / / /_/ _ \/ ___/ __/ _ \/ __ `/ /
- / / / __/  __(__  ) /_/  __/ /_/ / /
-/_/_/_/  \___/____/\__/\___/\__,_/_/
-  </pre>
+    data-ascii-logo
+    data-typing="true"><span class="ascii-logo__measure" data-ascii-source>{logoText}</span><span class="ascii-logo__output" data-ascii-output /><span class="ascii-logo__shimmer prism-text" data-ascii-shimmer /></pre>
   <span class="visually-hidden">lifesteal</span>
-  <p class="ascii-stage__tagline">INDEPENDENT AUDIO / NAARM / SIGNAL ACTIVE</p>
+  <p class="ascii-stage__tagline">INDEPENDENT AUDIO // NAARM</p>
 </div>
 
 <script>
@@ -23,93 +26,286 @@
     x: number;
     y: number;
     velocity: number;
+    gravity: number;
+    drift: number;
     alpha: number;
+    life: number;
+    age: number;
     glyph: string;
     size: number;
+    rotation: number;
+    angularVelocity: number;
   };
+
+  type Origin = { x: number; y: number };
 
   const stage = document.querySelector<HTMLElement>('[data-ascii-stage]');
   const logo = stage?.querySelector<HTMLElement>('[data-ascii-logo]');
+  const source = stage?.querySelector<HTMLElement>('[data-ascii-source]');
+  const output = stage?.querySelector<HTMLElement>('[data-ascii-output]');
+  const shimmer = stage?.querySelector<HTMLElement>('[data-ascii-shimmer]');
   const canvas = stage?.querySelector<HTMLCanvasElement>('[data-drip-canvas]');
 
-  if (stage && logo && canvas) {
-    const context = canvas.getContext('2d');
+  if (stage && logo && source && output && shimmer && canvas) {
+    const context = canvas.getContext('2d', { alpha: true });
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const glyphs = ['/', '\\', '|', ':', '.', '1', '0', '+', '*'];
+    const glyphs = [
+      'ア',
+      'イ',
+      'ウ',
+      'エ',
+      'オ',
+      'カ',
+      'キ',
+      'ク',
+      'ケ',
+      'コ',
+      'サ',
+      'シ',
+      'ス',
+      'セ',
+      'ソ',
+      'タ',
+      'チ',
+      'ツ',
+      'テ',
+      'ト',
+      'ナ',
+      'ニ',
+      'ヌ',
+      'ネ',
+      'ノ',
+      'ハ',
+      'ヒ',
+      'フ',
+      'ヘ',
+      'ホ',
+      'マ',
+      'ミ',
+      'ム',
+      'メ',
+      'モ',
+      'ヤ',
+      'ユ',
+      'ヨ',
+      'ラ',
+      'リ',
+      'ル',
+      'レ',
+      'ロ',
+      'ワ',
+      'ヲ',
+      'ン',
+      'あ',
+      'い',
+      'う',
+      'え',
+      'お',
+      'か',
+      'き',
+      'く',
+      'け',
+      'こ',
+      'さ',
+      'し',
+      'す',
+      'せ',
+      'そ',
+      'た',
+      'ち',
+      'つ',
+      'て',
+      'と',
+      'な',
+      'に',
+      'ぬ',
+      'ね',
+      'の',
+      'は',
+      'ひ',
+      'ふ',
+      'へ',
+      'ほ',
+      'ま',
+      'み',
+      'む',
+      'め',
+      'も',
+      'や',
+      'ゆ',
+      'よ',
+      'ら',
+      'り',
+      'る',
+      'れ',
+      'ろ',
+      'わ',
+      'を',
+      'ん',
+      '/',
+      '\\',
+      '|',
+      ':',
+      '.',
+      '1',
+      '0',
+      '+',
+      '*',
+    ];
+    const fullText = source.textContent ?? '';
     const particles: Particle[] = [];
+    const pool: Particle[] = [];
+    const origins: Origin[] = [];
     let frame = 0;
     let lastTime = 0;
+    let nextSpawnAt = Number.POSITIVE_INFINITY;
     let width = 0;
     let height = 0;
-    let logoBottom = 0;
-    let logoLeft = 0;
-    let logoWidth = 0;
+    let typingComplete = false;
+    let visible = true;
+
+    const rebuildOrigins = () => {
+      if (!context) return;
+      origins.length = 0;
+      const stageRect = stage.getBoundingClientRect();
+      const logoRect = logo.getBoundingClientRect();
+      const style = getComputedStyle(logo);
+      const fontSize = Number.parseFloat(style.fontSize);
+      const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.1;
+      context.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+      const characterWidth = context.measureText('0').width;
+      const lines = fullText.split('\n');
+      const columns = Math.max(...lines.map((line) => line.length));
+      const logoLeft = logoRect.left - stageRect.left;
+      const logoTop = logoRect.top - stageRect.top;
+
+      for (let column = 0; column < columns; column += 1) {
+        let lastInkRow = -1;
+        for (let row = 0; row < lines.length; row += 1) {
+          if ((lines[row]?.[column] ?? ' ') !== ' ') lastInkRow = row;
+        }
+        if (lastInkRow >= 0) {
+          origins.push({
+            x: logoLeft + (column + 0.5) * characterWidth,
+            y: logoTop + (lastInkRow + 0.91) * lineHeight,
+          });
+        }
+      }
+    };
 
     const resize = () => {
       const stageRect = stage.getBoundingClientRect();
-      const logoRect = logo.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
       width = stageRect.width;
       height = stageRect.height;
-      logoLeft = logoRect.left - stageRect.left;
-      logoWidth = logoRect.width;
-      logoBottom = logoRect.bottom - stageRect.top - 4;
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       context?.setTransform(ratio, 0, 0, ratio, 0, 0);
+      rebuildOrigins();
     };
 
-    const spawn = () => {
-      const streamX = logoLeft + Math.random() * logoWidth;
-      particles.push({
-        x: streamX,
-        y: logoBottom + Math.random() * 8,
-        velocity: 0.3 + Math.random() * 1.1,
-        alpha: 0.35 + Math.random() * 0.6,
+    const createParticle = (time: number) => {
+      if (particles.length >= 180 || origins.length === 0) return;
+      const origin = origins[Math.floor(Math.random() * origins.length)];
+      if (!origin) return;
+      const particle = pool.pop() ?? ({} as Particle);
+      Object.assign(particle, {
+        x: origin.x + (Math.random() - 0.5) * 3,
+        y: origin.y + Math.random() * 2,
+        velocity: 17 + Math.random() * 36,
+        gravity: 4 + Math.random() * 15,
+        drift: (Math.random() - 0.5) * 7,
+        alpha: 0.3 + Math.random() * 0.64,
+        life: 2.8 + Math.random() * 3.8,
+        age: 0,
         glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
-        size: 8 + Math.floor(Math.random() * 7),
+        size: 8 + Math.floor(Math.random() * 8),
+        rotation: (Math.random() - 0.5) * 1.5,
+        angularVelocity: (Math.random() - 0.5) * 0.75,
       });
+      particles.push(particle);
+      nextSpawnAt = time + 38 + Math.random() * 155;
+    };
+
+    const typeLogo = (time: number) => {
+      if (typingComplete) return;
+      const startedAt = Number(logo.dataset.typingStarted ?? time);
+      logo.dataset.typingStarted = String(startedAt);
+      const characterCount = Math.min(fullText.length, Math.floor((time - startedAt) * 0.34));
+      output.textContent = fullText.slice(0, characterCount);
+      shimmer.textContent = output.textContent;
+      if (characterCount >= fullText.length) {
+        typingComplete = true;
+        logo.dataset.typing = 'false';
+        nextSpawnAt = time + 180;
+      }
     };
 
     const draw = (time: number) => {
-      if (!context || reducedMotion.matches || document.hidden) {
-        frame = requestAnimationFrame(draw);
-        return;
-      }
-      if (time - lastTime < 34) {
-        frame = requestAnimationFrame(draw);
-        return;
-      }
+      frame = requestAnimationFrame(draw);
+      if (!context || reducedMotion.matches || document.hidden || !visible) return;
+      typeLogo(time);
+      if (lastTime === 0) lastTime = time;
+      const elapsed = Math.min((time - lastTime) / 1000, 0.05);
+      if (elapsed < 1 / 45) return;
       lastTime = time;
       context.clearRect(0, 0, width, height);
-      if (particles.length < 90 && Math.random() > 0.2) spawn();
-      if (particles.length < 90 && Math.random() > 0.7) spawn();
 
+      if (typingComplete && time >= nextSpawnAt) {
+        createParticle(time);
+        if (Math.random() > 0.74) createParticle(time);
+      }
+
+      context.shadowBlur = 7;
+      context.shadowColor = '#ff304f';
       for (let index = particles.length - 1; index >= 0; index -= 1) {
         const particle = particles[index];
-        particle.y += particle.velocity;
-        particle.velocity += 0.012;
-        particle.alpha -= 0.0025;
+        particle.age += elapsed;
+        particle.velocity += particle.gravity * elapsed;
+        particle.y += particle.velocity * elapsed;
+        particle.x += particle.drift * elapsed;
+        particle.rotation += particle.angularVelocity * elapsed;
+        const opacity = particle.alpha * Math.max(0, 1 - particle.age / particle.life);
+        context.save();
+        context.translate(particle.x, particle.y);
+        context.rotate(particle.rotation);
         context.font = `${particle.size}px "IBM Plex Mono", monospace`;
-        context.fillStyle = `rgba(255, 48, 79, ${Math.max(particle.alpha, 0)})`;
-        context.shadowBlur = 7;
-        context.shadowColor = '#ff304f';
-        context.fillText(particle.glyph, particle.x, particle.y);
-        if (particle.y > height || particle.alpha <= 0) particles.splice(index, 1);
+        context.fillStyle = `rgba(255, 48, 79, ${opacity})`;
+        context.fillText(particle.glyph, 0, 0);
+        context.restore();
+        if (particle.y > height + 20 || particle.age >= particle.life) {
+          particles.splice(index, 1);
+          pool.push(particle);
+        }
       }
-      frame = requestAnimationFrame(draw);
     };
 
+    if (reducedMotion.matches) {
+      output.textContent = fullText;
+      shimmer.textContent = fullText;
+      logo.dataset.typing = 'false';
+      typingComplete = true;
+    }
+
     resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(stage);
+    document.fonts?.ready.then(resize);
+    const resizeObserver = new ResizeObserver(resize);
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry?.isIntersecting ?? true;
+      },
+      { threshold: 0.05 },
+    );
+    resizeObserver.observe(stage);
+    visibilityObserver.observe(stage);
     frame = requestAnimationFrame(draw);
 
     document.addEventListener('astro:before-swap', () => {
       cancelAnimationFrame(frame);
-      observer.disconnect();
+      resizeObserver.disconnect();
+      visibilityObserver.disconnect();
     });
   }
 </script>
