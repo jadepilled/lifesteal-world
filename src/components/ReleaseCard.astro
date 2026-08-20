@@ -1,0 +1,314 @@
+---
+import type { GeneratedRelease } from '../lib/schema';
+import { releaseArtists } from '../lib/content';
+import { withBase } from '../lib/base';
+
+interface Props {
+  release: GeneratedRelease;
+  index: number;
+}
+
+const { release, index } = Astro.props;
+const creditedArtists = releaseArtists(release.artistIds);
+const spotifyLink = release.links.find((link) => link.platform === 'spotify');
+const artworkDestination = spotifyLink?.url;
+const artworkSrc = withBase(release.artwork.src);
+const responsiveArtwork =
+  release.artwork.src.startsWith('/assets/releases/') && release.artwork.src.endsWith('.webp')
+    ? `${withBase(release.artwork.src.replace('.webp', '-540.webp'))} 540w, ${withBase(release.artwork.src.replace('.webp', '-800.webp'))} 800w, ${artworkSrc} 1080w`
+    : undefined;
+const dateLabel = release.releaseDate
+  ? new Intl.DateTimeFormat('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
+      .format(new Date(`${release.releaseDate}T00:00:00`))
+      .toUpperCase()
+  : 'DATE TBA';
+const paletteStyle = [
+  `--release-bg:${release.palette.background}`,
+  `--release-surface:${release.palette.surface}`,
+  `--release-fg:${release.palette.foreground}`,
+  `--release-accent:${release.palette.accent}`,
+  `--release-glow:${release.palette.glow}`,
+].join(';');
+---
+
+<article class="release-card" style={paletteStyle} data-release-id={release.canonicalId}>
+  <div class="release-card__artwork-shell">
+    {
+      artworkDestination ? (
+        <a
+          href={artworkDestination}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open ${release.title} on Spotify`}
+        >
+          <img
+            class="release-card__artwork"
+            src={artworkSrc}
+            srcset={responsiveArtwork}
+            sizes="(max-width: 760px) calc(100vw - 32px), 50vw"
+            alt={release.artwork.alt}
+            width="1080"
+            height="1080"
+            loading={index === 0 ? 'eager' : 'lazy'}
+            fetchpriority={index === 0 ? 'high' : 'auto'}
+          />
+        </a>
+      ) : (
+        <img
+          class="release-card__artwork"
+          src={artworkSrc}
+          srcset={responsiveArtwork}
+          sizes="(max-width: 760px) calc(100vw - 32px), 50vw"
+          alt={release.artwork.alt}
+          width="1080"
+          height="1080"
+          loading={index === 0 ? 'eager' : 'lazy'}
+          fetchpriority={index === 0 ? 'high' : 'auto'}
+        />
+      )
+    }
+  </div>
+
+  <div class="release-card__copy">
+    <div class="release-card__register">
+      <span>REL/{String(index + 1).padStart(3, '0')}</span>
+      <span class="release-card__status">[{release.status.toUpperCase()}]</span>
+    </div>
+    <p class="release-card__artist">
+      {creditedArtists.map((artist) => artist.displayName).join(' + ')}
+    </p>
+    <h2>{release.title}</h2>
+    <dl class="release-card__meta">
+      <div>
+        <dt>FORMAT</dt>
+        <dd>{release.releaseType.toUpperCase()}</dd>
+      </div>
+      <div>
+        <dt>DATE</dt>
+        <dd>{dateLabel}</dd>
+      </div>
+      <div>
+        <dt>PRIMARY</dt>
+        <dd>{release.artwork.source.toUpperCase()}</dd>
+      </div>
+    </dl>
+    <p class="release-card__biography">{release.biography}</p>
+
+    {
+      release.metrics.length > 0 && (
+        <ul class="release-card__metrics" aria-label="Platform metrics">
+          {release.metrics.map((metric) => (
+            <li>
+              <span>{metric.platform.toUpperCase()} PLAYS</span>
+              <strong>{new Intl.NumberFormat('en-AU').format(metric.value)}</strong>
+              <small>AS OF {new Date(metric.asOf).toLocaleDateString('en-AU')}</small>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    <ul class="release-card__links" aria-label={`${release.title} platform links`}>
+      {
+        release.links.map((link) => (
+          <li>
+            <a class="button-link" href={link.url} target="_blank" rel="noreferrer">
+              {link.platform}
+            </a>
+          </li>
+        ))
+      }
+      {release.links.length === 0 && <li class="release-card__pending">PLATFORM LINKS PENDING</li>}
+    </ul>
+
+    {
+      release.artwork.source === 'spotify' && spotifyLink && (
+        <p class="release-card__attribution">
+          Artwork and metadata supplied by Spotify.{' '}
+          <a href={spotifyLink.url} target="_blank" rel="noreferrer">
+            Open in Spotify
+          </a>
+          .
+        </p>
+      )
+    }
+  </div>
+</article>
+
+<style>
+  .release-card {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.86fr) minmax(400px, 1.14fr);
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--release-accent), transparent 60%);
+    background:
+      radial-gradient(
+        circle at 100% 0%,
+        color-mix(in srgb, var(--release-accent), transparent 84%),
+        transparent 45%
+      ),
+      var(--release-bg);
+    color: var(--release-fg);
+    box-shadow: 0 0 50px color-mix(in srgb, var(--release-glow), transparent 92%);
+  }
+
+  .release-card__artwork-shell {
+    display: grid;
+    min-height: 100%;
+    border-right: 1px solid color-mix(in srgb, var(--release-accent), transparent 66%);
+    background: var(--release-surface);
+    place-items: center;
+  }
+
+  .release-card__artwork-shell a {
+    display: block;
+    width: 100%;
+  }
+
+  .release-card__artwork {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+
+  .release-card__copy {
+    display: flex;
+    min-width: 0;
+    padding: clamp(34px, 5.2vw, 78px);
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .release-card__register {
+    display: flex;
+    justify-content: space-between;
+    color: color-mix(in srgb, var(--release-fg), transparent 48%);
+    font-size: 10px;
+    letter-spacing: 0.11em;
+  }
+
+  .release-card__status {
+    color: var(--release-accent);
+    text-shadow: 0 0 9px var(--release-glow);
+  }
+
+  .release-card__artist {
+    margin: 44px 0 3px;
+    color: var(--release-accent);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+  }
+
+  .release-card h2 {
+    margin: 0 0 30px;
+    font-family: var(--display);
+    font-size: clamp(60px, 8.4vw, 124px);
+    font-weight: 900;
+    line-height: 0.78;
+    letter-spacing: -0.055em;
+    text-shadow: 0 0 22px color-mix(in srgb, var(--release-glow), transparent 66%);
+  }
+
+  .release-card__meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    margin: 0 0 28px;
+    border-top: 1px solid color-mix(in srgb, var(--release-accent), transparent 72%);
+    border-bottom: 1px solid color-mix(in srgb, var(--release-accent), transparent 72%);
+  }
+
+  .release-card__meta div {
+    padding: 11px 12px 11px 0;
+  }
+
+  .release-card__meta dt {
+    color: color-mix(in srgb, var(--release-fg), transparent 48%);
+    font-size: 9px;
+  }
+
+  .release-card__meta dd {
+    margin: 2px 0 0;
+    font-size: 11px;
+  }
+
+  .release-card__biography {
+    max-width: 680px;
+    color: color-mix(in srgb, var(--release-fg), transparent 22%);
+  }
+
+  .release-card__metrics,
+  .release-card__links {
+    display: flex;
+    padding: 0;
+    margin: 20px 0 0;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+  }
+
+  .release-card__metrics li {
+    display: grid;
+    padding: 10px 13px;
+    border: 1px solid color-mix(in srgb, var(--release-accent), transparent 70%);
+    gap: 2px;
+  }
+
+  .release-card__metrics span,
+  .release-card__metrics small {
+    color: color-mix(in srgb, var(--release-fg), transparent 50%);
+    font-size: 8px;
+  }
+
+  .release-card__metrics strong {
+    color: var(--release-accent);
+    font-family: var(--display);
+    font-size: 25px;
+  }
+
+  .release-card__links :global(.button-link)::before {
+    color: var(--release-accent);
+  }
+
+  .release-card__pending {
+    padding: 10px 14px;
+    border: 1px dashed color-mix(in srgb, var(--release-fg), transparent 72%);
+    color: color-mix(in srgb, var(--release-fg), transparent 45%);
+    font-size: 10px;
+  }
+
+  .release-card__attribution {
+    margin: 20px 0 0;
+    color: color-mix(in srgb, var(--release-fg), transparent 52%);
+    font-size: 9px;
+  }
+
+  @media (max-width: 880px) {
+    .release-card {
+      grid-template-columns: 1fr;
+    }
+
+    .release-card__artwork-shell {
+      border-right: 0;
+      border-bottom: 1px solid color-mix(in srgb, var(--release-accent), transparent 66%);
+    }
+  }
+
+  @media (max-width: 540px) {
+    .release-card__copy {
+      padding: 30px 22px 38px;
+    }
+
+    .release-card__artist {
+      margin-top: 30px;
+    }
+
+    .release-card__meta {
+      grid-template-columns: 1fr;
+    }
+
+    .release-card__meta div:not(:last-child) {
+      border-bottom: 1px dotted color-mix(in srgb, var(--release-accent), transparent 75%);
+    }
+  }
+</style>

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "hazelmere",
+    "slug": "hazelmere",
+    "displayName": "HAZELMERE",
+    "genres": ["Hardstyle", "Hardtekk", "Hyperpop", "Happy Hardcore", "Hypertrance"],
+    "activeYears": "2026–present",
+    "location": "Melbourne, Australia",
+    "biography": "HAZELMERE brings nostalgic, whimsical, and euphoric music with no shortage of intensity within the hardstyle, uptempo, and tekk niche. With a deep love for 2000s-era sounds, she creates emotional and catchy melodies coupled with rhythmic, pulsing basses. She has a love for experimentation and tries to bring a fresh take to every song, unbound by the confines of any one genre.",
+    "portrait": {
+      "src": "/assets/artists/hazelmere-portrait.png",
+      "alt": "Red-toned portrait of HAZELMERE",
+      "focalPoint": "50% 45%"
+    },
+    "mark": {
+      "src": "/assets/artists/hazelmere-mark.png",
+      "alt": "HAZELMERE artist mark"
+    },
+    "spotifyArtistId": null,
+    "soundcloudProfileUrl": "https://soundcloud.com/hazelmere/",
+    "links": [
+      {
+        "label": "Instagram",
+        "platform": "instagram",
+        "url": "https://www.instagram.com/h_a_z_e_l_m_e_r_e"
+      },
+      {
+        "label": "SoundCloud",
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/"
+      }
+    ]
+  },
+  {
+    "id": "starstrike",
+    "slug": "starstrike",
+    "displayName": "starstrike",
+    "genres": ["Hyperpop", "Scenecore", "Digicore"],
+    "activeYears": "2019–2022",
+    "location": "Melbourne, Australia",
+    "biography": "starstrike brings a unique scenecore sound with hyperpop influences and a distinct Y2K feel. Layered, airy, autotune-soaked vocals combine with energetic beats and heavy bass to deliver a modern and vivid hyperpop act that served as the initial launchpad for HAZELMERE.",
+    "portrait": {
+      "src": "/assets/artists/starstrike-portrait.webp",
+      "alt": "Pink halftone portrait artwork for starstrike",
+      "focalPoint": "50% 50%"
+    },
+    "spotifyArtistId": "4MkRcUXF9bFAN8mxl8Cc7h",
+    "soundcloudProfileUrl": "https://soundcloud.com/starstrike/",
+    "links": [
+      {
+        "label": "SoundCloud",
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/starstrike/"
+      },
+      {
+        "label": "Spotify",
+        "platform": "spotify",
+        "url": "https://open.spotify.com/artist/4MkRcUXF9bFAN8mxl8Cc7h"
+      }
+    ]
+  }
+]

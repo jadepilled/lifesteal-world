@@ -1,0 +1,66 @@
+---
+import '@fontsource/barlow-condensed/700.css';
+import '@fontsource/barlow-condensed/800.css';
+import '@fontsource/barlow-condensed/900.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { withBase } from '../lib/base';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  page?: string;
+  mainClass?: string;
+}
+
+const {
+  title = 'LIFESTEAL',
+  description = 'Independent record label and alternative lifestyle brand based in Naarm.',
+  image = '/assets/releases/audioclub-cover.jpg',
+  page = 'default',
+  mainClass = '',
+} = Astro.props;
+
+const pageTitle = title === 'LIFESTEAL' ? 'lifesteal' : `${title} // lifesteal`;
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const socialImage = new URL(withBase(image), Astro.site);
+---
+
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="icon" href={withBase('/assets/brand/icon.svg')} type="image/svg+xml" />
+    <link rel="manifest" href={withBase('/site.webmanifest')} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="LIFESTEAL" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <title>{pageTitle}</title>
+  </head>
+  <body data-page={page}>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="screen-texture" aria-hidden="true"></div>
+    <Header />
+    <main id="main-content" class:list={['site-main', mainClass]}>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

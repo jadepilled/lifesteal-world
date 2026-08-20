@@ -1,0 +1,44 @@
+[
+  {
+    "id": "audioclub-presave",
+    "releaseId": "hazelmere-audioclub",
+    "title": "AUDIOCLUB",
+    "artistId": "hazelmere",
+    "copy": "A new HAZELMERE transmission. Pre-save routing will appear here as soon as the distributor link is active.",
+    "artwork": {
+      "src": "/assets/releases/audioclub-cover.webp",
+      "alt": "AUDIOCLUB cover with red repeated type and monochrome figures"
+    },
+    "palette": {
+      "background": "#000000",
+      "surface": "#100404",
+      "foreground": "#fff5f5",
+      "accent": "#f02b31",
+      "glow": "#ff3840"
+    },
+    "status": "coming-soon",
+    "smartlinkUrl": null,
+    "downloadUrl": null
+  },
+  {
+    "id": "life-is-beautiful-presave",
+    "releaseId": "hazelmere-life-is-beautiful",
+    "title": "LIFE IS BEAUTIFUL",
+    "artistId": "hazelmere",
+    "copy": "Melodic pressure, sentiment without restraint. Pre-save routing will appear here as soon as the distributor link is active.",
+    "artwork": {
+      "src": "/assets/releases/life-is-beautiful-cover.webp",
+      "alt": "LIFE IS BEAUTIFUL cover with a black thorn-like mark over a pink sky"
+    },
+    "palette": {
+      "background": "#080609",
+      "surface": "#1a121c",
+      "foreground": "#fff8ff",
+      "accent": "#dda6ef",
+      "glow": "#f4a6ef"
+    },
+    "status": "coming-soon",
+    "smartlinkUrl": null,
+    "downloadUrl": null
+  }
+]

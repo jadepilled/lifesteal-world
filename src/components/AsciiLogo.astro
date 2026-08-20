@@ -1,0 +1,115 @@
+<div class="ascii-stage" data-ascii-stage>
+  <div class="ascii-stage__status" aria-hidden="true">
+    <span>SYS.LABEL / LIFESTEAL</span>
+    <span>2021—2026</span>
+  </div>
+  <canvas class="ascii-stage__canvas" data-drip-canvas aria-hidden="true"></canvas>
+  <pre
+    class="ascii-logo"
+    aria-hidden="true"
+    data-ascii-logo>
+    ___ ____          __             __
+   / (_) __/__  _____/ /____  ____ _/ /
+  / / / /_/ _ \/ ___/ __/ _ \/ __ `/ /
+ / / / __/  __(__  ) /_/  __/ /_/ / /
+/_/_/_/  \___/____/\__/\___/\__,_/_/
+  </pre>
+  <span class="visually-hidden">lifesteal</span>
+  <p class="ascii-stage__tagline">INDEPENDENT AUDIO / NAARM / SIGNAL ACTIVE</p>
+</div>
+
+<script>
+  type Particle = {
+    x: number;
+    y: number;
+    velocity: number;
+    alpha: number;
+    glyph: string;
+    size: number;
+  };
+
+  const stage = document.querySelector<HTMLElement>('[data-ascii-stage]');
+  const logo = stage?.querySelector<HTMLElement>('[data-ascii-logo]');
+  const canvas = stage?.querySelector<HTMLCanvasElement>('[data-drip-canvas]');
+
+  if (stage && logo && canvas) {
+    const context = canvas.getContext('2d');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const glyphs = ['/', '\\', '|', ':', '.', '1', '0', '+', '*'];
+    const particles: Particle[] = [];
+    let frame = 0;
+    let lastTime = 0;
+    let width = 0;
+    let height = 0;
+    let logoBottom = 0;
+    let logoLeft = 0;
+    let logoWidth = 0;
+
+    const resize = () => {
+      const stageRect = stage.getBoundingClientRect();
+      const logoRect = logo.getBoundingClientRect();
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      width = stageRect.width;
+      height = stageRect.height;
+      logoLeft = logoRect.left - stageRect.left;
+      logoWidth = logoRect.width;
+      logoBottom = logoRect.bottom - stageRect.top - 4;
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context?.setTransform(ratio, 0, 0, ratio, 0, 0);
+    };
+
+    const spawn = () => {
+      const streamX = logoLeft + Math.random() * logoWidth;
+      particles.push({
+        x: streamX,
+        y: logoBottom + Math.random() * 8,
+        velocity: 0.3 + Math.random() * 1.1,
+        alpha: 0.35 + Math.random() * 0.6,
+        glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
+        size: 8 + Math.floor(Math.random() * 7),
+      });
+    };
+
+    const draw = (time: number) => {
+      if (!context || reducedMotion.matches || document.hidden) {
+        frame = requestAnimationFrame(draw);
+        return;
+      }
+      if (time - lastTime < 34) {
+        frame = requestAnimationFrame(draw);
+        return;
+      }
+      lastTime = time;
+      context.clearRect(0, 0, width, height);
+      if (particles.length < 90 && Math.random() > 0.2) spawn();
+      if (particles.length < 90 && Math.random() > 0.7) spawn();
+
+      for (let index = particles.length - 1; index >= 0; index -= 1) {
+        const particle = particles[index];
+        particle.y += particle.velocity;
+        particle.velocity += 0.012;
+        particle.alpha -= 0.0025;
+        context.font = `${particle.size}px "IBM Plex Mono", monospace`;
+        context.fillStyle = `rgba(255, 48, 79, ${Math.max(particle.alpha, 0)})`;
+        context.shadowBlur = 7;
+        context.shadowColor = '#ff304f';
+        context.fillText(particle.glyph, particle.x, particle.y);
+        if (particle.y > height || particle.alpha <= 0) particles.splice(index, 1);
+      }
+      frame = requestAnimationFrame(draw);
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(stage);
+    frame = requestAnimationFrame(draw);
+
+    document.addEventListener('astro:before-swap', () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    });
+  }
+</script>

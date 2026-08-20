@@ -1,0 +1,20 @@
+[
+  {
+    "id": "hazelmere-life-is-beautiful",
+    "label": "LIFESTEAL",
+    "year": 2026,
+    "artist": "HAZELMERE",
+    "album": "LIFE IS BEAUTIFUL",
+    "title": "LIFE IS BEAUTIFUL",
+    "audioFilename": "audio-life-is-beautiful.mp3",
+    "artwork": {
+      "src": "/assets/releases/life-is-beautiful-cover.webp",
+      "alt": "LIFE IS BEAUTIFUL cover with a black thorn-like mark over a pink sky"
+    },
+    "durationMs": 158000,
+    "explicit": false,
+    "credits": "Written and produced by HAZELMERE. Released by LIFESTEAL.",
+    "enabled": true,
+    "order": 1
+  }
+]

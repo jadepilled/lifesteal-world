@@ -1,0 +1,40 @@
+---
+import { withBase } from '../lib/base';
+
+const pathname = Astro.url.pathname;
+const navigation = [
+  { href: '/artists/', label: 'artists' },
+  { href: '/releases/', label: 'releases' },
+  { href: '/radio/', label: 'radio' },
+  { href: '/store/', label: 'store' },
+  { href: '/about/', label: 'about' },
+];
+---
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="wordmark" href={withBase('/')} aria-label="lifesteal home">lifesteal</a>
+
+    <nav class="site-nav" aria-label="Primary navigation">
+      <span class="site-nav__prompt" aria-hidden="true">&gt;</span>
+      <ul>
+        {
+          navigation.map((item) => (
+            <li>
+              <a
+                href={withBase(item.href)}
+                aria-current={pathname.startsWith(withBase(item.href)) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <span class="site-header__status" aria-label="Website online">
+      <span aria-hidden="true"></span> online
+    </span>
+  </div>
+</header>

@@ -1,0 +1,519 @@
+---
+import PageHeading from '../components/PageHeading.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { radioTracks } from '../lib/content';
+import { withBase } from '../lib/base';
+
+const stationEnabled = import.meta.env.PUBLIC_RADIO_ENABLED === 'true';
+const hlsUrl =
+  import.meta.env.PUBLIC_RADIO_HLS_URL ?? 'https://radio.lifesteal.world/live/index.m3u8';
+const mp3Url = import.meta.env.PUBLIC_RADIO_MP3_URL ?? 'https://radio.lifesteal.world/stream.mp3';
+const metadataUrl =
+  import.meta.env.PUBLIC_RADIO_METADATA_URL ?? 'https://radio.lifesteal.world/now-playing.json';
+const initialTrack = radioTracks[0];
+---
+
+<BaseLayout
+  title="Radio"
+  description="The LIFESTEAL live radio signal. One continuous programme shared by every listener."
+  image={initialTrack?.artwork.src}
+  page="radio"
+>
+  <PageHeading
+    route="RADIO"
+    title="radio"
+    intro="One programme, one source, one point in time. When the transmission is active, every listener joins the same live signal rather than starting a private playlist."
+    status={stationEnabled ? 'LIVE' : 'OFFLINE'}
+  />
+
+  <section
+    class:list={['radio-console', 'panel', { 'radio-console--offline': !stationEnabled }]}
+    data-radio-console
+    data-enabled={stationEnabled ? 'true' : 'false'}
+    data-hls-url={hlsUrl}
+    data-mp3-url={mp3Url}
+    data-metadata-url={metadataUrl}
+    aria-label="LIFESTEAL radio player"
+  >
+    <div class="radio-console__art-shell">
+      <img
+        src={initialTrack ? withBase(initialTrack.artwork.src) : undefined}
+        alt={initialTrack?.artwork.alt}
+        width="1080"
+        height="1080"
+        data-radio-artwork
+      />
+      <div class="radio-console__signal" aria-hidden="true">
+        {
+          Array.from({ length: 22 }, (_, index) => (
+            <span style={`--bar:${index};--height:${12 + (index % 8) * 10}%`} />
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="radio-console__readout">
+      <div class="radio-console__topline">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span data-radio-state>{stationEnabled ? 'READY TO JOIN' : 'SIGNAL OFFLINE'}</span>
+        <span>CH.001</span>
+      </div>
+
+      <div class="radio-console__metadata">
+        <span class="eyebrow">NOW TRANSMITTING</span>
+        <p class="radio-console__artist" data-radio-artist>{initialTrack?.artist}</p>
+        <h2 data-radio-title>{initialTrack?.title}</h2>
+        <p class="radio-console__album" data-radio-album>
+          {initialTrack?.album} / {initialTrack?.year} / {initialTrack?.label}
+        </p>
+      </div>
+
+      <div class="radio-console__divider" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div class="radio-console__controls">
+        <button
+          class="radio-console__join"
+          type="button"
+          data-radio-toggle
+          disabled={!stationEnabled}
+        >
+          {stationEnabled ? 'JOIN LIVE SIGNAL' : 'TRANSMISSION SERVER PENDING'}
+        </button>
+        <label class="radio-console__volume">
+          <span>LEVEL</span>
+          <input
+            data-radio-volume
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value="0.8"
+            disabled={!stationEnabled}
+          />
+        </label>
+      </div>
+
+      <p class="radio-console__notice" data-radio-notice>
+        {
+          stationEnabled
+            ? 'Playback begins only after you choose to join. The programme itself is already in motion.'
+            : 'SIGNAL OFFLINE // TRANSMISSION SERVER PENDING.'
+        }
+      </p>
+      <audio data-radio-audio preload="none"></audio>
+    </div>
+  </section>
+
+  <div class="radio-manifest">
+    <span class="eyebrow">STATION MANIFEST</span>
+    <ol>
+      {
+        radioTracks.map((track) => (
+          <li>
+            <span>{track.artist}</span>
+            <strong>{track.title}</strong>
+            <span>
+              {track.label} / {track.year}
+            </span>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</BaseLayout>
+
+<script>
+  type NowPlaying = {
+    artist?: string;
+    title?: string;
+    album?: string;
+    year?: number;
+    label?: string;
+    artwork?: string;
+  };
+
+  const consoleElement = document.querySelector<HTMLElement>('[data-radio-console]');
+  if (consoleElement?.dataset.enabled === 'true') {
+    const audio = consoleElement.querySelector<HTMLAudioElement>('[data-radio-audio]');
+    const toggle = consoleElement.querySelector<HTMLButtonElement>('[data-radio-toggle]');
+    const volume = consoleElement.querySelector<HTMLInputElement>('[data-radio-volume]');
+    const state = consoleElement.querySelector<HTMLElement>('[data-radio-state]');
+    const notice = consoleElement.querySelector<HTMLElement>('[data-radio-notice]');
+    const title = consoleElement.querySelector<HTMLElement>('[data-radio-title]');
+    const artist = consoleElement.querySelector<HTMLElement>('[data-radio-artist]');
+    const album = consoleElement.querySelector<HTMLElement>('[data-radio-album]');
+    const artwork = consoleElement.querySelector<HTMLImageElement>('[data-radio-artwork]');
+    let hls: { destroy: () => void } | undefined;
+    let metadataTimer = 0;
+    let loading = false;
+
+    const setState = (value: string, machineState: string) => {
+      if (state) state.textContent = value;
+      consoleElement.dataset.state = machineState;
+    };
+
+    const useMp3Fallback = () => {
+      if (!audio || !consoleElement.dataset.mp3Url) return;
+      hls?.destroy();
+      hls = undefined;
+      audio.src = consoleElement.dataset.mp3Url;
+      notice && (notice.textContent = 'HLS unavailable; joined through the continuous MP3 mount.');
+    };
+
+    const attachStream = async () => {
+      if (!audio || loading) return;
+      loading = true;
+      const hlsUrl = consoleElement.dataset.hlsUrl;
+      try {
+        if (hlsUrl && audio.canPlayType('application/vnd.apple.mpegurl')) {
+          audio.src = hlsUrl;
+        } else if (hlsUrl) {
+          const { default: Hls } = await import('hls.js');
+          if (!Hls.isSupported()) {
+            useMp3Fallback();
+          } else {
+            const instance = new Hls({
+              liveSyncDurationCount: 3,
+              liveMaxLatencyDurationCount: 8,
+              enableWorker: true,
+            });
+            instance.on(Hls.Events.ERROR, (_event, data) => {
+              if (data.fatal) useMp3Fallback();
+            });
+            instance.loadSource(hlsUrl);
+            instance.attachMedia(audio);
+            hls = instance;
+          }
+        } else {
+          useMp3Fallback();
+        }
+        await audio.play();
+        setState('LIVE / CONNECTED', 'playing');
+        if (toggle) toggle.textContent = 'LEAVE LIVE SIGNAL';
+      } catch {
+        setState('CONNECTION FAILED', 'error');
+        if (notice)
+          notice.textContent =
+            'The signal could not be joined. Check the connection and try again.';
+      } finally {
+        loading = false;
+      }
+    };
+
+    const stopStream = () => {
+      if (!audio) return;
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      hls?.destroy();
+      hls = undefined;
+      setState('READY TO JOIN', 'ready');
+      if (toggle) toggle.textContent = 'JOIN LIVE SIGNAL';
+    };
+
+    const refreshMetadata = async () => {
+      const url = consoleElement.dataset.metadataUrl;
+      if (!url) return;
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) return;
+        const metadata = (await response.json()) as NowPlaying;
+        if (title && metadata.title) title.textContent = metadata.title;
+        if (artist && metadata.artist) artist.textContent = metadata.artist;
+        if (album) {
+          album.textContent = [metadata.album, metadata.year, metadata.label]
+            .filter(Boolean)
+            .join(' / ');
+        }
+        if (artwork && metadata.artwork) artwork.src = metadata.artwork;
+        if ('mediaSession' in navigator && metadata.title) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: metadata.title,
+            artist: metadata.artist,
+            album: metadata.album,
+            artwork: metadata.artwork ? [{ src: metadata.artwork }] : [],
+          });
+        }
+      } catch {
+        // Keep the last known metadata visible while the stream continues.
+      }
+    };
+
+    toggle?.addEventListener('click', () => {
+      if (audio?.paused) attachStream();
+      else stopStream();
+    });
+    volume?.addEventListener('input', () => {
+      if (audio) audio.volume = Number(volume.value);
+    });
+    if (audio && volume) audio.volume = Number(volume.value);
+    refreshMetadata();
+    metadataTimer = window.setInterval(refreshMetadata, 10_000);
+    document.addEventListener('astro:before-swap', () => {
+      window.clearInterval(metadataTimer);
+      hls?.destroy();
+    });
+  }
+</script>
+
+<style>
+  .radio-console {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.88fr) minmax(400px, 1.12fr);
+    overflow: hidden;
+  }
+
+  .radio-console__art-shell {
+    position: relative;
+    min-height: 560px;
+    overflow: hidden;
+    border-right: 1px solid var(--line);
+    background: #080508;
+  }
+
+  .radio-console__art-shell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(0.15) brightness(0.65);
+  }
+
+  .radio-console:not(.radio-console--offline)[data-state='playing'] .radio-console__art-shell img {
+    filter: none;
+  }
+
+  .radio-console__signal {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    left: 18px;
+    display: flex;
+    align-items: flex-end;
+    height: 70px;
+    gap: 5px;
+  }
+
+  .radio-console__signal span {
+    width: 100%;
+    height: var(--height);
+    background: rgba(244, 241, 234, 0.25);
+    transform-origin: bottom;
+  }
+
+  .radio-console[data-state='playing'] .radio-console__signal span {
+    background: var(--magenta);
+    box-shadow: 0 0 8px rgba(242, 166, 255, 0.65);
+    animation: meter calc(420ms + var(--bar) * 19ms) ease-in-out infinite alternate;
+  }
+
+  .radio-console__readout {
+    display: flex;
+    min-width: 0;
+    padding: clamp(32px, 5.5vw, 82px);
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .radio-console__topline {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    padding-bottom: 13px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    gap: 10px;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+  }
+
+  .radio-console[data-state='playing'] .live-dot {
+    box-shadow: 0 0 12px var(--red);
+    animation: pulse 1.1s steps(2, end) infinite;
+  }
+
+  .radio-console__metadata {
+    padding: clamp(42px, 7vw, 90px) 0 34px;
+  }
+
+  .radio-console__artist {
+    margin: 12px 0 0;
+    color: var(--magenta);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+  }
+
+  .radio-console h2 {
+    margin: 2px 0 21px;
+    font-family: var(--display);
+    font-size: clamp(68px, 9vw, 142px);
+    font-weight: 900;
+    line-height: 0.76;
+    letter-spacing: -0.055em;
+    text-shadow: 0 0 25px rgba(242, 166, 255, 0.3);
+  }
+
+  .radio-console__album {
+    margin: 0;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .radio-console__divider {
+    display: grid;
+    grid-template-columns: 1fr 14px 7px;
+    gap: 7px;
+  }
+
+  .radio-console__divider span {
+    height: 2px;
+    background: var(--line-strong);
+  }
+
+  .radio-console__divider span:first-child {
+    background: var(--red);
+    box-shadow: 0 0 9px rgba(255, 48, 79, 0.7);
+  }
+
+  .radio-console__controls {
+    display: grid;
+    grid-template-columns: 1fr minmax(150px, 0.55fr);
+    margin-top: 32px;
+    gap: 14px;
+  }
+
+  .radio-console__join {
+    min-height: 54px;
+    border: 1px solid var(--magenta);
+    background: rgba(242, 166, 255, 0.05);
+    color: var(--white);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+  }
+
+  .radio-console__join:not(:disabled):hover {
+    box-shadow:
+      inset 0 0 25px rgba(242, 166, 255, 0.12),
+      0 0 16px rgba(242, 166, 255, 0.14);
+  }
+
+  .radio-console__join:disabled {
+    border-style: dashed;
+    border-color: var(--line-strong);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .radio-console__volume {
+    display: grid;
+    align-content: center;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 9px;
+    gap: 5px;
+  }
+
+  .radio-console__volume input {
+    width: 100%;
+    accent-color: var(--magenta);
+  }
+
+  .radio-console__notice {
+    margin: 24px 0 0;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .radio-console--offline .live-dot {
+    background: #625f5d;
+  }
+
+  .radio-manifest {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    padding: 26px 0;
+    margin-top: 48px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .radio-manifest ol {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .radio-manifest li {
+    display: grid;
+    grid-template-columns: minmax(140px, 0.6fr) 1fr auto;
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--line);
+    color: var(--muted);
+    font-size: 11px;
+    gap: 18px;
+  }
+
+  .radio-manifest strong {
+    color: var(--white);
+    font-weight: 500;
+  }
+
+  @keyframes meter {
+    from {
+      transform: scaleY(0.26);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .radio-console {
+      grid-template-columns: 1fr;
+    }
+
+    .radio-console__art-shell {
+      min-height: auto;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      aspect-ratio: 1;
+    }
+  }
+
+  @media (max-width: 580px) {
+    .radio-console__readout {
+      padding: 30px 22px 38px;
+    }
+
+    .radio-console__controls,
+    .radio-manifest {
+      grid-template-columns: 1fr;
+    }
+
+    .radio-manifest {
+      gap: 16px;
+    }
+
+    .radio-manifest li {
+      grid-template-columns: 1fr;
+      gap: 1px;
+    }
+  }
+</style>

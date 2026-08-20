@@ -1,0 +1,30 @@
+---
+import PageHeading from '../components/PageHeading.astro';
+import ReleaseCard from '../components/ReleaseCard.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { releases } from '../lib/content';
+---
+
+<BaseLayout
+  title="Releases"
+  description="Releases and forthcoming transmissions from LIFESTEAL artists."
+  page="releases"
+>
+  <PageHeading
+    route="RELEASES"
+    title="releases"
+    intro="Canonical recordings assembled across platforms. Artwork defines the local signal; metrics are shown only where the platform exposes them honestly."
+    status={`${releases.length.toString().padStart(2, '0')} LOADED`}
+  />
+
+  <div class="release-index">
+    {releases.map((release, index) => <ReleaseCard release={release} index={index} />)}
+  </div>
+</BaseLayout>
+
+<style>
+  .release-index {
+    display: grid;
+    gap: clamp(48px, 8vw, 120px);
+  }
+</style>

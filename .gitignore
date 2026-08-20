@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+playwright-report/
+test-results/
+coverage/
+.lighthouseci/
+.env
+.env.*
+*.log

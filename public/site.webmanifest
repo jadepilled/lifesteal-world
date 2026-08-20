@@ -1,0 +1,16 @@
+{
+  "name": "LIFESTEAL",
+  "short_name": "lifesteal",
+  "description": "Independent record label and alternative lifestyle brand based in Naarm.",
+  "start_url": "/lifesteal-world/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/lifesteal-world/assets/brand/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

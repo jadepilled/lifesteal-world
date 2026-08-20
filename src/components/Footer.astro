@@ -1,0 +1,29 @@
+---
+import { withBase } from '../lib/base';
+---
+
+<footer class="site-footer" itemscope itemtype="https://schema.org/Organization">
+  <meta itemprop="name" content="LIFESTEAL" />
+  <meta itemprop="foundingDate" content="2021" />
+  <meta itemprop="address" content="Naarm, Australia" />
+
+  <div class="site-footer__rule" aria-hidden="true"><span>EOF</span></div>
+  <div class="site-footer__content">
+    <p>
+      LIFESTEAL acknowledges the rightful owners and traditional caretakers of all land upon which
+      it conducts operations.
+    </p>
+    <p>
+      We recognise and pay respects to the Wurundjeri Woi Wurrung and Bunurong people of the Kulin
+      Nation.
+      <img
+        class="acknowledgement-flag"
+        src={withBase('/assets/brand/aboriginal-flag.svg')}
+        alt="Australian Aboriginal Flag"
+        width="30"
+        height="20"
+      />
+    </p>
+    <p class="site-footer__copyright">All site-specific content copyright (c) LIFESTEAL 2026</p>
+  </div>
+</footer>

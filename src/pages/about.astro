@@ -1,0 +1,134 @@
+---
+import PageHeading from '../components/PageHeading.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="About"
+  description="LIFESTEAL is an independent record label and alternative lifestyle brand founded in 2021 and based in Naarm."
+  page="about"
+>
+  <PageHeading
+    route="ABOUT"
+    title="about"
+    intro="LIFESTEAL is an independent record label and alternative lifestyle brand founded in 2021, based in Naarm."
+    status="OPEN CHANNEL"
+  />
+
+  <section class="contact-terminal panel" itemscope itemtype="https://schema.org/Organization">
+    <meta itemprop="name" content="LIFESTEAL" />
+    <div class="contact-terminal__command" aria-hidden="true">
+      <span>C:\LIFESTEAL&gt;</span> contact --open
+    </div>
+    <div class="contact-terminal__output">
+      <span class="eyebrow">PRIMARY CONTACT</span>
+      <a itemprop="email" href="mailto:hello@lifesteal.world">hello@lifesteal.world</a>
+      <p>Copyright / collaboration / booking / events / general contact</p>
+    </div>
+    <div class="contact-terminal__facts">
+      <dl>
+        <div><dt>TYPE</dt><dd>RECORD LABEL / ALTERNATIVE LIFESTYLE BRAND</dd></div>
+        <div><dt>FOUNDED</dt><dd>2021</dd></div>
+        <div><dt>BASE</dt><dd itemprop="address">NAARM, AUSTRALIA</dd></div>
+        <div><dt>STATUS</dt><dd class="contact-terminal__online">ACCEPTING SIGNAL</dd></div>
+      </dl>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .contact-terminal {
+    overflow: hidden;
+  }
+
+  .contact-terminal__command {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .contact-terminal__command span {
+    margin-right: 10px;
+    color: var(--red);
+  }
+
+  .contact-terminal__output {
+    padding: clamp(42px, 8vw, 110px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .contact-terminal__output a {
+    display: block;
+    width: fit-content;
+    margin: 12px 0 26px;
+    font-family: var(--display);
+    font-size: clamp(44px, 9vw, 130px);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.045em;
+    text-decoration: none;
+    text-shadow: 0 0 24px rgba(255, 255, 255, 0.18);
+  }
+
+  .contact-terminal__output p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .contact-terminal__facts {
+    padding: 22px clamp(24px, 5vw, 72px);
+  }
+
+  .contact-terminal__facts dl {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin: 0;
+    gap: 20px;
+  }
+
+  .contact-terminal__facts div {
+    min-width: 0;
+  }
+
+  .contact-terminal__facts dt {
+    color: var(--red);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .contact-terminal__facts dd {
+    margin: 4px 0 0;
+    color: #cbc7c0;
+    font-size: 10px;
+  }
+
+  .contact-terminal__online {
+    color: var(--green) !important;
+    text-shadow: 0 0 8px rgba(144, 255, 154, 0.5);
+  }
+
+  @media (max-width: 800px) {
+    .contact-terminal__facts dl {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 520px) {
+    .contact-terminal__output {
+      padding: 42px 22px;
+    }
+
+    .contact-terminal__output a {
+      font-size: clamp(35px, 10vw, 56px);
+      overflow-wrap: anywhere;
+    }
+
+    .contact-terminal__facts dl {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

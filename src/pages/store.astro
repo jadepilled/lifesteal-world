@@ -1,0 +1,184 @@
+---
+import PageHeading from '../components/PageHeading.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { artistById, presaves } from '../lib/content';
+import { withBase } from '../lib/base';
+---
+
+<BaseLayout
+  title="Store"
+  description="Pre-save forthcoming LIFESTEAL releases AUDIOCLUB and LIFE IS BEAUTIFUL."
+  page="store"
+>
+  <PageHeading
+    route="STORE"
+    title="store"
+    intro="Forthcoming LIFESTEAL transmissions. There is no checkout, account, or hidden cost—only direct release routing when each distributor link becomes active."
+    status="NO CHARGE"
+  />
+
+  <div class="store-grid">
+    {
+      presaves.map((entry, index) => {
+        const artist = artistById.get(entry.artistId);
+        const style = [
+          `--item-bg:${entry.palette.background}`,
+          `--item-surface:${entry.palette.surface}`,
+          `--item-fg:${entry.palette.foreground}`,
+          `--item-accent:${entry.palette.accent}`,
+          `--item-glow:${entry.palette.glow}`,
+        ].join(';');
+        const actionable = entry.status === 'active' && entry.smartlinkUrl;
+        const artworkSrc = withBase(entry.artwork.src);
+        const responsiveArtwork = entry.artwork.src.endsWith('.webp')
+          ? `${withBase(entry.artwork.src.replace('.webp', '-540.webp'))} 540w, ${withBase(entry.artwork.src.replace('.webp', '-800.webp'))} 800w, ${artworkSrc} 1080w`
+          : undefined;
+
+        return (
+          <article class="store-item" style={style}>
+            <div class="store-item__register">
+              <span>ITEM/{String(index + 1).padStart(3, '0')}</span>
+              <span>$0.00 AUD</span>
+            </div>
+            <img
+              class="store-item__artwork"
+              src={artworkSrc}
+              srcset={responsiveArtwork}
+              sizes="(max-width: 760px) calc(100vw - 32px), 50vw"
+              alt={entry.artwork.alt}
+              width="1080"
+              height="1080"
+              loading={index === 0 ? 'eager' : 'lazy'}
+              fetchpriority={index === 0 ? 'high' : 'auto'}
+            />
+            <div class="store-item__copy">
+              <p class="store-item__artist">{artist?.displayName ?? 'HAZELMERE'}</p>
+              <h2>{entry.title}</h2>
+              <p>{entry.copy}</p>
+              {actionable ? (
+                <a
+                  class="store-item__action"
+                  href={entry.smartlinkUrl!}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  PRE-SAVE / FREE
+                </a>
+              ) : (
+                <span class="store-item__action" aria-disabled="true">
+                  PRE-SAVE LINK INITIALISING
+                </span>
+              )}
+            </div>
+          </article>
+        );
+      })
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .store-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(24px, 4vw, 64px);
+  }
+
+  .store-item {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--item-accent), transparent 58%);
+    background:
+      radial-gradient(
+        circle at 100% 100%,
+        color-mix(in srgb, var(--item-accent), transparent 84%),
+        transparent 50%
+      ),
+      var(--item-bg);
+    color: var(--item-fg);
+    box-shadow: 0 0 55px color-mix(in srgb, var(--item-glow), transparent 94%);
+  }
+
+  .store-item__register {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid color-mix(in srgb, var(--item-accent), transparent 62%);
+    color: color-mix(in srgb, var(--item-fg), transparent 42%);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .store-item__register span:last-child {
+    color: var(--item-accent);
+  }
+
+  .store-item__artwork {
+    width: 100%;
+    height: auto;
+    border-bottom: 1px solid color-mix(in srgb, var(--item-accent), transparent 62%);
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+
+  .store-item__copy {
+    padding: clamp(28px, 4vw, 54px);
+  }
+
+  .store-item__artist {
+    margin: 0;
+    color: var(--item-accent);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  .store-item h2 {
+    margin: 2px 0 24px;
+    font-family: var(--display);
+    font-size: clamp(58px, 6.6vw, 104px);
+    font-weight: 900;
+    line-height: 0.82;
+    letter-spacing: -0.055em;
+    text-shadow: 0 0 22px color-mix(in srgb, var(--item-glow), transparent 60%);
+  }
+
+  .store-item__copy > p:last-of-type {
+    max-width: 610px;
+    color: color-mix(in srgb, var(--item-fg), transparent 22%);
+  }
+
+  .store-item__action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 50px;
+    padding: 12px 15px;
+    margin-top: 30px;
+    border: 1px solid var(--item-accent);
+    color: var(--item-fg);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+  }
+
+  .store-item__action::after {
+    color: var(--item-accent);
+    content: '[>]';
+  }
+
+  .store-item__action[aria-disabled='true'] {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--item-accent), transparent 42%);
+    color: color-mix(in srgb, var(--item-fg), transparent 48%);
+  }
+
+  .store-item__action[aria-disabled='true']::after {
+    content: '[...]';
+  }
+
+  @media (max-width: 850px) {
+    .store-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

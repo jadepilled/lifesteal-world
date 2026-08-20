@@ -1,0 +1,46 @@
+name: Verify site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Run browser and accessibility checks
+        run: npm run test:e2e -- --project=chromium
+      - run: npm run test:lighthouse
+
+      - name: Upload browser reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-reports
+          path: |
+            playwright-report
+            test-results
+            .lighthouseci
+          if-no-files-found: ignore
+          retention-days: 7

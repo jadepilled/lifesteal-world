@@ -1,0 +1,43 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../lib/base';
+---
+
+<BaseLayout title="404" description="The requested LIFESTEAL route could not be found." page="404">
+  <section class="not-found panel">
+    <span class="eyebrow">ROUTE FAILURE</span>
+    <h1>404</h1>
+    <p>The requested signal does not exist in this archive.</p>
+    <a class="button-link" href={withBase('/')}>RETURN TO ROOT</a>
+  </section>
+</BaseLayout>
+
+<style>
+  .not-found {
+    display: grid;
+    min-height: 60svh;
+    padding: clamp(36px, 8vw, 110px);
+    place-content: center;
+    text-align: center;
+  }
+
+  .not-found h1 {
+    margin: 10px 0;
+    color: var(--red);
+    font-family: var(--display);
+    font-size: clamp(120px, 26vw, 350px);
+    font-weight: 900;
+    line-height: 0.7;
+    letter-spacing: -0.06em;
+    text-shadow: 0 0 40px rgba(255, 48, 79, 0.35);
+  }
+
+  .not-found p {
+    color: var(--muted);
+  }
+
+  .not-found :global(.button-link) {
+    justify-self: center;
+    margin-top: 20px;
+  }
+</style>

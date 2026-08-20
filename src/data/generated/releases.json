@@ -1,0 +1,70 @@
+[
+  {
+    "canonicalId": "hazelmere-audioclub",
+    "title": "AUDIOCLUB",
+    "version": null,
+    "artistIds": ["hazelmere"],
+    "album": "AUDIOCLUB",
+    "releaseType": "single",
+    "status": "upcoming",
+    "releaseDate": null,
+    "durationMs": null,
+    "isrc": null,
+    "biography": "A high-impact transmission from HAZELMERE: clipped signal, body-moving pressure, and the exhilaration of a system pushed just past its limit.",
+    "artwork": {
+      "src": "/assets/releases/audioclub-cover.webp",
+      "alt": "AUDIOCLUB cover with red repeated type and monochrome figures",
+      "source": "local"
+    },
+    "palette": {
+      "background": "#000000",
+      "surface": "#100404",
+      "foreground": "#fff5f5",
+      "accent": "#f02b31",
+      "glow": "#ff3840"
+    },
+    "links": [],
+    "metrics": [],
+    "provenance": [
+      {
+        "source": "local",
+        "sourceId": "hazelmere-audioclub",
+        "fetchedAt": null
+      }
+    ]
+  },
+  {
+    "canonicalId": "hazelmere-life-is-beautiful",
+    "title": "LIFE IS BEAUTIFUL",
+    "version": null,
+    "artistIds": ["hazelmere"],
+    "album": "LIFE IS BEAUTIFUL",
+    "releaseType": "single",
+    "status": "upcoming",
+    "releaseDate": null,
+    "durationMs": 158000,
+    "isrc": null,
+    "biography": "Euphoria rendered at full intensity: a bright, sentimental melody held against the physical force of HAZELMERE’s harder club language.",
+    "artwork": {
+      "src": "/assets/releases/life-is-beautiful-cover.webp",
+      "alt": "LIFE IS BEAUTIFUL cover with a black thorn-like mark over a pink sky",
+      "source": "local"
+    },
+    "palette": {
+      "background": "#080609",
+      "surface": "#1a121c",
+      "foreground": "#fff8ff",
+      "accent": "#dda6ef",
+      "glow": "#f4a6ef"
+    },
+    "links": [],
+    "metrics": [],
+    "provenance": [
+      {
+        "source": "local",
+        "sourceId": "hazelmere-life-is-beautiful",
+        "fetchedAt": null
+      }
+    ]
+  }
+]

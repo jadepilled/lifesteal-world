@@ -1,0 +1,353 @@
+---
+import PageHeading from '../components/PageHeading.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { artists } from '../lib/content';
+import { withBase } from '../lib/base';
+---
+
+<BaseLayout
+  title="Artists"
+  description="Meet the artists on LIFESTEAL: HAZELMERE and starstrike."
+  page="artists"
+>
+  <PageHeading
+    route="ARTISTS"
+    title="artists"
+    intro="Two identities, one evolving signal. Browse the artists currently held in the LIFESTEAL archive."
+    status={`${artists.length.toString().padStart(2, '0')} RECORDS`}
+  />
+
+  <section
+    class="artist-browser panel"
+    data-artist-browser
+    aria-label="LIFESTEAL artists"
+    tabindex="0"
+  >
+    <div class="artist-browser__rail" aria-hidden="true">
+      <span>INDEX</span>
+      <ol>
+        {artists.map((_, index) => <li data-index-marker>{String(index + 1).padStart(2, '0')}</li>)}
+      </ol>
+    </div>
+
+    <div class="artist-browser__viewport" aria-live="polite">
+      {
+        artists.map((artist, index) => (
+          <article
+            class="artist-slide"
+            id={artist.slug}
+            data-artist-slide
+            data-artist-id={artist.slug}
+            hidden={index !== 0}
+          >
+            <div class="artist-slide__image-wrap">
+              <img
+                class="artist-slide__image"
+                src={withBase(artist.portrait.src)}
+                alt={artist.portrait.alt}
+                width={artist.id === 'starstrike' ? 2660 : 1200}
+                height={artist.id === 'starstrike' ? 1140 : 1200}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchpriority={index === 0 ? 'high' : 'auto'}
+                style={`object-position:${artist.portrait.focalPoint ?? '50% 50%'}`}
+              />
+              <span class="artist-slide__scan" aria-hidden="true" />
+            </div>
+
+            <div class="artist-slide__copy">
+              <span class="eyebrow">ARTIST / {String(index + 1).padStart(2, '0')}</span>
+              <h2>{artist.displayName}</h2>
+              <dl class="artist-meta">
+                <div>
+                  <dt>ACTIVE</dt>
+                  <dd>{artist.activeYears}</dd>
+                </div>
+                <div>
+                  <dt>LOCATION</dt>
+                  <dd>{artist.location}</dd>
+                </div>
+                <div>
+                  <dt>GENRE</dt>
+                  <dd>{artist.genres.join(' / ')}</dd>
+                </div>
+              </dl>
+              <p class="artist-biography">{artist.biography}</p>
+              <ul class="artist-links" aria-label={`${artist.displayName} links`}>
+                {artist.links.map((link) => (
+                  <li>
+                    <a class="button-link" href={link.url} target="_blank" rel="noreferrer">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+
+    <div class="artist-browser__controls">
+      <button
+        class="terminal-button"
+        type="button"
+        data-artist-previous
+        aria-label="Previous artist"
+      >
+        PREV
+      </button>
+      <output data-artist-position>01 / {String(artists.length).padStart(2, '0')}</output>
+      <button class="terminal-button" type="button" data-artist-next aria-label="Next artist">
+        NEXT
+      </button>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const browser = document.querySelector<HTMLElement>('[data-artist-browser]');
+  if (browser) {
+    const slides = [...browser.querySelectorAll<HTMLElement>('[data-artist-slide]')];
+    const markers = [...browser.querySelectorAll<HTMLElement>('[data-index-marker]')];
+    const previous = browser.querySelector<HTMLButtonElement>('[data-artist-previous]');
+    const next = browser.querySelector<HTMLButtonElement>('[data-artist-next]');
+    const output = browser.querySelector<HTMLOutputElement>('[data-artist-position]');
+    let active = Math.max(
+      0,
+      slides.findIndex((slide) => slide.dataset.artistId === window.location.hash.slice(1)),
+    );
+    let touchStart = 0;
+
+    const show = (requested: number, updateHash = true) => {
+      active = (requested + slides.length) % slides.length;
+      slides.forEach((slide, index) => {
+        slide.hidden = index !== active;
+      });
+      markers.forEach((marker, index) => marker.toggleAttribute('data-active', index === active));
+      if (output) {
+        output.value = `${String(active + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      }
+      const id = slides[active]?.dataset.artistId;
+      if (updateHash && id) history.replaceState(null, '', `#${id}`);
+    };
+
+    previous?.addEventListener('click', () => show(active - 1));
+    next?.addEventListener('click', () => show(active + 1));
+    browser.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        show(active - 1);
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        show(active + 1);
+      }
+    });
+    browser.addEventListener('touchstart', (event) => {
+      touchStart = event.changedTouches[0]?.clientX ?? 0;
+    });
+    browser.addEventListener('touchend', (event) => {
+      const distance = (event.changedTouches[0]?.clientX ?? touchStart) - touchStart;
+      if (Math.abs(distance) > 55) show(active + (distance < 0 ? 1 : -1));
+    });
+    show(active, false);
+  }
+</script>
+
+<style>
+  .artist-browser {
+    display: grid;
+    grid-template-columns: 58px 1fr;
+    overflow: hidden;
+  }
+
+  .artist-browser__rail {
+    padding: 26px 13px;
+    border-right: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    writing-mode: vertical-rl;
+  }
+
+  .artist-browser__rail ol {
+    display: flex;
+    padding: 0;
+    margin: 30px 0 0;
+    gap: 12px;
+    list-style: none;
+  }
+
+  .artist-browser__rail li[data-active] {
+    color: var(--red);
+    text-shadow: 0 0 8px var(--red);
+  }
+
+  .artist-browser__viewport {
+    min-width: 0;
+  }
+
+  .artist-slide {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.95fr) minmax(390px, 1.05fr);
+    min-height: 650px;
+  }
+
+  .artist-slide[hidden] {
+    display: none;
+  }
+
+  .artist-slide__image-wrap {
+    position: relative;
+    min-height: 580px;
+    overflow: hidden;
+    border-right: 1px solid var(--line);
+    background: #070707;
+  }
+
+  .artist-slide__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: contrast(1.04) saturate(0.95);
+  }
+
+  .artist-slide__scan {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.07),
+      transparent 55%
+    );
+    background-size: 250% 100%;
+    mix-blend-mode: screen;
+    pointer-events: none;
+    animation: artist-scan 8s linear infinite;
+  }
+
+  .artist-slide__copy {
+    display: flex;
+    align-items: flex-start;
+    padding: clamp(36px, 6vw, 92px);
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .artist-slide h2 {
+    margin: 7px 0 30px;
+    font-family: var(--display);
+    font-size: clamp(64px, 8vw, 126px);
+    font-weight: 900;
+    line-height: 0.8;
+    letter-spacing: -0.05em;
+  }
+
+  .artist-meta {
+    display: grid;
+    width: 100%;
+    margin: 0 0 32px;
+    gap: 9px;
+  }
+
+  .artist-meta div {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    padding-bottom: 9px;
+    border-bottom: 1px dotted var(--line);
+  }
+
+  .artist-meta dt {
+    color: var(--red);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .artist-meta dd {
+    margin: 0;
+    color: #d5d1cb;
+    font-size: 12px;
+  }
+
+  .artist-biography {
+    max-width: 670px;
+    color: #c3beb8;
+  }
+
+  .artist-links {
+    display: flex;
+    padding: 0;
+    margin: 14px 0 0;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+  }
+
+  .artist-browser__controls {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    border-top: 1px solid var(--line);
+  }
+
+  .artist-browser__controls button {
+    border: 0;
+    min-height: 54px;
+  }
+
+  .artist-browser__controls button:first-child {
+    justify-self: start;
+  }
+
+  .artist-browser__controls button:last-child {
+    justify-self: end;
+  }
+
+  .artist-browser__controls output {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  @keyframes artist-scan {
+    to {
+      background-position: -250% 0;
+    }
+  }
+
+  @media (max-width: 920px) {
+    .artist-browser {
+      grid-template-columns: 1fr;
+    }
+
+    .artist-browser__rail {
+      display: none;
+    }
+
+    .artist-slide {
+      grid-template-columns: 1fr;
+    }
+
+    .artist-slide__image-wrap {
+      min-height: min(78vw, 620px);
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .artist-browser__controls {
+      grid-column: 1;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .artist-slide__copy {
+      padding: 32px 22px 42px;
+    }
+
+    .artist-meta div {
+      grid-template-columns: 74px 1fr;
+    }
+  }
+</style>
