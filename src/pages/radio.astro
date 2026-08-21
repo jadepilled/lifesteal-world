@@ -158,6 +158,7 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
         }
       | undefined;
     let metadataTimer = 0;
+    let visualizerTimer = 0;
     let loading = false;
 
     const updateNetworkStats = () => {
@@ -181,6 +182,7 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
         visualizer ||
         !visualizerCanvas ||
         !audio ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
         !window.matchMedia('(min-width: 901px)').matches
       )
         return visualizer;
@@ -330,13 +332,14 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     updateNetworkStats();
     window.addEventListener('online', updateNetworkStats);
     window.addEventListener('offline', updateNetworkStats);
-    void ensureVisualizer();
+    visualizerTimer = window.setTimeout(() => void ensureVisualizer(), 650);
     refreshMetadata();
     metadataTimer = window.setInterval(refreshMetadata, 10_000);
     document.addEventListener(
       'astro:before-swap',
       () => {
         window.clearInterval(metadataTimer);
+        window.clearTimeout(visualizerTimer);
         hls?.destroy();
         visualizer?.destroy();
         window.removeEventListener('online', updateNetworkStats);
