@@ -11,7 +11,7 @@ const logoText = String.raw`    ___ ____          __             __
     <span>LIFESTEAL // HOME</span>
     <span>FOUNDED 2021</span>
   </div>
-  <canvas class="ascii-stage__canvas" data-drip-canvas aria-hidden="true"></canvas>
+  <canvas class="ascii-stage__canvas" data-rain-canvas aria-hidden="true"></canvas>
   <div class="ascii-console">
     <pre
       class="ascii-logo"
@@ -19,9 +19,13 @@ const logoText = String.raw`    ___ ____          __             __
       data-ascii-logo
       data-typing="true"><span class="ascii-logo__measure" data-ascii-source>{logoText}</span><span class="ascii-logo__output" data-ascii-output /><span class="ascii-logo__shimmer prism-text" data-ascii-shimmer /></pre>
     <form class="ascii-terminal" data-terminal-form autocomplete="off">
-      <label class="visually-hidden" for="ascii-terminal-input">Enter a colour command</label>
-      <span class="ascii-terminal__prompt" aria-hidden="true">C:\LIFESTEAL&gt;</span>
+      <label class="visually-hidden" for="ascii-terminal-input"
+        >Enter a colour or page command</label
+      >
+      <span class="ascii-terminal__prompt" aria-hidden="true">C:\lifesteal\system&gt;</span>
       <span class="ascii-terminal__entry">
+        <span class="ascii-terminal__value" data-terminal-value aria-hidden="true"></span>
+        <span class="ascii-terminal__cursor" aria-hidden="true"></span>
         <input
           id="ascii-terminal-input"
           class="ascii-terminal__input"
@@ -35,10 +39,9 @@ const logoText = String.raw`    ___ ____          __             __
           disabled
           aria-describedby="ascii-terminal-hint"
         />
-        <span class="ascii-terminal__cursor" data-terminal-cursor aria-hidden="true"></span>
       </span>
       <span id="ascii-terminal-hint" class="visually-hidden"
-        >Enter a colour name and press Enter to recolour the logo.</span
+        >Enter a colour name or a page name, then press Enter.</span
       >
     </form>
   </div>
@@ -47,105 +50,40 @@ const logoText = String.raw`    ___ ____          __             __
 </div>
 
 <script>
-  type Particle = {
-    x: number;
-    y: number;
-    velocity: number;
-    gravity: number;
-    drift: number;
-    alpha: number;
-    life: number;
-    age: number;
-    glyph: string;
-    color: string;
-    size: number;
-    rotation: number;
-    angularVelocity: number;
-  };
+  import { applyStoredTheme, applyTheme, resolveThemeCommand, type ThemeMode } from '../lib/theme';
 
-  type Origin = { x: number; y: number };
+  type RainOrigin = { x: number; y: number };
+  type LogoInkLine = { baselineY: number; text: string; x: number };
+  type RainStream = {
+    ambient: boolean;
+    colorOffset: number;
+    delayUntil: number;
+    glyphs: string[];
+    headY: number;
+    length: number;
+    nextGlyphAt: number;
+    originY: number;
+    spacing: number;
+    speed: number;
+    x: number;
+  };
 
   const stage = document.querySelector<HTMLElement>('[data-ascii-stage]');
   const logo = stage?.querySelector<HTMLElement>('[data-ascii-logo]');
   const source = stage?.querySelector<HTMLElement>('[data-ascii-source]');
   const output = stage?.querySelector<HTMLElement>('[data-ascii-output]');
   const shimmer = stage?.querySelector<HTMLElement>('[data-ascii-shimmer]');
-  const canvas = stage?.querySelector<HTMLCanvasElement>('[data-drip-canvas]');
+  const canvas = stage?.querySelector<HTMLCanvasElement>('[data-rain-canvas]');
   const terminalForm = stage?.querySelector<HTMLFormElement>('[data-terminal-form]');
   const terminalInput = stage?.querySelector<HTMLInputElement>('[data-terminal-input]');
+  const terminalValue = stage?.querySelector<HTMLElement>('[data-terminal-value]');
 
   if (stage && logo && source && output && shimmer && canvas) {
     const context = canvas.getContext('2d', { alpha: true });
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const desktopTerminal = window.matchMedia('(min-width: 901px)');
+    const mobileViewport = window.matchMedia('(max-width: 700px)');
     const typingDuration = 5000;
-    type ColourMode = {
-      name: string;
-      logo: string[];
-      particles: string[];
-    };
-    const colourModes: Record<string, ColourMode> = {
-      DEFAULT: { name: 'default', logo: ['#f7f7f5'], particles: ['#ff304f'] },
-      WHITE: { name: 'white', logo: ['#ffffff'], particles: ['#ffffff'] },
-      RED: { name: 'red', logo: ['#ff304f'], particles: ['#ff304f', '#ff6b7f'] },
-      BLUE: { name: 'blue', logo: ['#2f7cff'], particles: ['#2f7cff', '#72d7ff'] },
-      GREEN: { name: 'green', logo: ['#2de37b'], particles: ['#2de37b', '#a4ffbf'] },
-      PINK: { name: 'pink', logo: ['#ff4fa7'], particles: ['#ff4fa7', '#ff9bd0'] },
-      PURPLE: { name: 'purple', logo: ['#a855f7'], particles: ['#a855f7', '#d7a6ff'] },
-      ORANGE: { name: 'orange', logo: ['#ff7a1a'], particles: ['#ff7a1a', '#ffc067'] },
-      YELLOW: { name: 'yellow', logo: ['#ffd400'], particles: ['#ffd400', '#fff09a'] },
-      CYAN: { name: 'cyan', logo: ['#24d8ff'], particles: ['#24d8ff', '#b6f6ff'] },
-      MAGENTA: { name: 'magenta', logo: ['#ff2ed1'], particles: ['#ff2ed1', '#ff9aea'] },
-      GAY: {
-        name: 'gay',
-        logo: ['#078d70', '#26ceaa', '#98e8c1', '#ffffff', '#7bade2', '#5049cc', '#3d1a78'],
-        particles: ['#078d70', '#26ceaa', '#98e8c1', '#ffffff', '#7bade2', '#5049cc', '#3d1a78'],
-      },
-      LESBIAN: {
-        name: 'lesbian',
-        logo: ['#d52d00', '#ff9a56', '#ffffff', '#d362a4', '#a30262'],
-        particles: ['#d52d00', '#ff9a56', '#ffffff', '#d362a4', '#a30262'],
-      },
-      PAN: {
-        name: 'pansexual',
-        logo: ['#ff218c', '#ffd800', '#21b1ff'],
-        particles: ['#ff218c', '#ffd800', '#21b1ff'],
-      },
-      BI: {
-        name: 'bisexual',
-        logo: ['#d60270', '#9b4f96', '#0038a8'],
-        particles: ['#d60270', '#9b4f96', '#0038a8'],
-      },
-      TRANS: {
-        name: 'transgender',
-        logo: ['#5bcefa', '#f5a9b8', '#ffffff', '#f5a9b8', '#5bcefa'],
-        particles: ['#5bcefa', '#f5a9b8', '#ffffff'],
-      },
-      INTERSEX: {
-        name: 'intersex',
-        logo: ['#ffd800', '#7902aa', '#ffd800'],
-        particles: ['#ffd800', '#7902aa'],
-      },
-      RAINBOW: {
-        name: 'rainbow',
-        logo: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#24408e', '#732982'],
-        particles: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#24408e', '#732982'],
-      },
-      ABORIGINAL: {
-        name: 'aboriginal',
-        logo: ['#000000', '#dd0000', '#ffcf00'],
-        particles: ['#000000', '#dd0000', '#ffcf00'],
-      },
-    };
-    const commandAliases: Record<string, string> = {
-      PANSEXUAL: 'PAN',
-      BISEXUAL: 'BI',
-      TRANSGENDER: 'TRANS',
-      LGBT: 'RAINBOW',
-      INDIGENOUS: 'ABORIGINAL',
-      GREY: 'WHITE',
-      GRAY: 'WHITE',
-    };
     const glyphs = [
       'ア',
       'イ',
@@ -239,71 +177,119 @@ const logoText = String.raw`    ___ ____          __             __
       'わ',
       'を',
       'ん',
-      '/',
-      '\\',
-      '|',
-      ':',
-      '.',
-      '1',
       '0',
+      '1',
+      ':',
       '+',
       '*',
     ];
     const fullText = source.textContent ?? '';
-    const particles: Particle[] = [];
-    const pool: Particle[] = [];
-    const origins: Origin[] = [];
+    const origins: RainOrigin[] = [];
+    const logoInkLines: LogoInkLine[] = [];
+    const logoStreams: RainStream[] = [];
+    const ambientStreams: RainStream[] = [];
+    const routeBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const routeCommands: Record<string, string> = {
+      HOME: '/',
+      ARTIST: '/artists/',
+      ARTISTS: '/artists/',
+      RELEASE: '/releases/',
+      RELEASES: '/releases/',
+      RADIO: '/radio/',
+      STORE: '/store/',
+      ABOUT: '/about/',
+    };
     let frame = 0;
     let lastTime = 0;
-    let nextSpawnAt = Number.POSITIVE_INFINITY;
     let width = 0;
     let height = 0;
     let typingComplete = false;
     let visible = true;
-    let activeMode = colourModes.DEFAULT;
+    let activeMode = applyStoredTheme();
+    let logoMaskFont = '';
 
-    const makeGradient = (colors: string[]) => {
-      if (colors.length === 1) return `linear-gradient(90deg, ${colors[0]}, ${colors[0]})`;
-      return `linear-gradient(90deg, ${colors
-        .map((color, index) => `${color} ${(index / (colors.length - 1)) * 100}%`)
-        .join(', ')})`;
-    };
+    const randomGlyph = () => glyphs[Math.floor(Math.random() * glyphs.length)] ?? 'ア';
 
-    const applyColourMode = (mode: ColourMode) => {
+    const applyVisualMode = (mode: ThemeMode) => {
       activeMode = mode;
       stage.dataset.colourMode = mode.name;
-      stage.style.setProperty('--terminal-primary', mode.particles[0] ?? '#ff304f');
-      stage.style.setProperty('--terminal-gradient', makeGradient(mode.logo));
+      stage.style.setProperty('--terminal-primary', mode.accent);
     };
 
-    const updateTerminalCursor = () => {
-      if (!terminalInput) return;
-      const position = terminalInput.selectionStart ?? terminalInput.value.length;
-      terminalInput.parentElement?.style.setProperty('--cursor-position', String(position));
+    const createGlyphTrail = (length: number) => Array.from({ length }, () => randomGlyph());
+
+    const resetLogoStream = (stream: RainStream, time: number, initial = false) => {
+      const origin = origins[Math.floor(Math.random() * origins.length)];
+      if (!origin) return;
+      stream.ambient = false;
+      stream.x = origin.x;
+      stream.originY = origin.y + 1;
+      stream.headY = stream.originY;
+      stream.speed = 38 + Math.random() * 54;
+      stream.spacing = 11 + Math.random() * 4;
+      stream.length = 5 + Math.floor(Math.random() * 8);
+      stream.glyphs = createGlyphTrail(stream.length);
+      stream.nextGlyphAt = time + 60 + Math.random() * 130;
+      stream.delayUntil = initial ? Number.POSITIVE_INFINITY : time + 280 + Math.random() * 1500;
+      stream.colorOffset = Math.floor(Math.random() * activeMode.rain.length);
     };
 
-    const revealTerminal = () => {
-      stage.dataset.terminalReady = 'true';
-      if (desktopTerminal.matches && terminalInput) {
-        terminalInput.disabled = false;
-        window.setTimeout(() => terminalInput.focus({ preventScroll: true }), 120);
+    const resetAmbientStream = (stream: RainStream, time: number, initial = false, order = 0) => {
+      const grid = 13;
+      stream.ambient = true;
+      stream.x = Math.round((Math.random() * width) / grid) * grid;
+      stream.speed = 20 + Math.random() * 34;
+      stream.spacing = 13 + Math.random() * 4;
+      stream.length = 8 + Math.floor(Math.random() * 10);
+      stream.originY = -stream.length * stream.spacing - 12;
+      stream.headY = -8 - Math.random() * 36;
+      stream.glyphs = createGlyphTrail(stream.length);
+      stream.nextGlyphAt = time + 120 + Math.random() * 260;
+      stream.delayUntil = initial
+        ? time + 180 + order * (mobileViewport.matches ? 240 : 180) + Math.random() * 520
+        : time + 240 + Math.random() * 1400;
+      stream.colorOffset = Math.floor(Math.random() * activeMode.rain.length);
+    };
+
+    const primeLogoStreams = (time: number) => {
+      for (let index = 0; index < logoStreams.length; index += 1) {
+        const stream = logoStreams[index];
+        if (!stream) continue;
+        resetLogoStream(stream, time);
+        stream.delayUntil = time + 160 + index * 86 + Math.random() * 420;
       }
     };
 
-    const rebuildOrigins = () => {
+    const rebuildGeometry = () => {
       if (!context) return;
       origins.length = 0;
+      logoInkLines.length = 0;
       const stageRect = stage.getBoundingClientRect();
       const logoRect = logo.getBoundingClientRect();
       const style = getComputedStyle(logo);
       const fontSize = Number.parseFloat(style.fontSize);
       const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.1;
-      context.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+      logoMaskFont = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+      context.font = logoMaskFont;
       const characterWidth = context.measureText('0').width;
       const lines = fullText.split('\n');
       const columns = Math.max(...lines.map((line) => line.length));
       const logoLeft = logoRect.left - stageRect.left;
       const logoTop = logoRect.top - stageRect.top;
+
+      for (let row = 0; row < lines.length; row += 1) {
+        const line = lines[row] ?? '';
+        if (/\S/.test(line)) {
+          const metrics = context.measureText(line);
+          const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+          const descent = metrics.actualBoundingBoxDescent || fontSize * 0.2;
+          logoInkLines.push({
+            x: logoLeft,
+            baselineY: logoTop + row * lineHeight + (lineHeight - ascent - descent) / 2 + ascent,
+            text: line,
+          });
+        }
+      }
 
       for (let column = 0; column < columns; column += 1) {
         let lastInkRow = -1;
@@ -313,15 +299,32 @@ const logoText = String.raw`    ___ ____          __             __
         if (lastInkRow >= 0) {
           origins.push({
             x: logoLeft + (column + 0.5) * characterWidth,
-            y: logoTop + (lastInkRow + 0.91) * lineHeight,
+            y: logoTop + (lastInkRow + 0.92) * lineHeight,
           });
         }
+      }
+
+      logoStreams.length = 0;
+      ambientStreams.length = 0;
+      const emittedCount = Math.min(origins.length, mobileViewport.matches ? 15 : 34);
+      const ambientCount = mobileViewport.matches ? 15 : 32;
+      const now = performance.now();
+      for (let index = 0; index < emittedCount; index += 1) {
+        const stream = {} as RainStream;
+        resetLogoStream(stream, now, true);
+        logoStreams.push(stream);
+      }
+      if (typingComplete) primeLogoStreams(now);
+      for (let index = 0; index < ambientCount; index += 1) {
+        const stream = {} as RainStream;
+        resetAmbientStream(stream, now, true, index);
+        ambientStreams.push(stream);
       }
     };
 
     const resize = () => {
       const stageRect = stage.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      const ratio = Math.min(window.devicePixelRatio || 1, mobileViewport.matches ? 1.2 : 1.4);
       width = stageRect.width;
       height = stageRect.height;
       canvas.width = Math.round(width * ratio);
@@ -329,33 +332,59 @@ const logoText = String.raw`    ___ ____          __             __
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       context?.setTransform(ratio, 0, 0, ratio, 0, 0);
-      rebuildOrigins();
+      rebuildGeometry();
     };
 
-    const createParticle = (time: number) => {
-      if (particles.length >= 180 || origins.length === 0) return;
-      const origin = origins[Math.floor(Math.random() * origins.length)];
-      if (!origin) return;
-      const particle = pool.pop() ?? ({} as Particle);
-      Object.assign(particle, {
-        x: origin.x + (Math.random() - 0.5) * 3,
-        y: origin.y + Math.random() * 2,
-        velocity: 17 + Math.random() * 36,
-        gravity: 4 + Math.random() * 15,
-        drift: (Math.random() - 0.5) * 7,
-        alpha: 0.3 + Math.random() * 0.64,
-        life: 2.8 + Math.random() * 3.8,
-        age: 0,
-        glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
-        color:
-          activeMode.particles[Math.floor(Math.random() * activeMode.particles.length)] ??
-          '#ff304f',
-        size: 8 + Math.floor(Math.random() * 8),
-        rotation: 0,
-        angularVelocity: (Math.random() < 0.5 ? -1 : 1) * (1.25 + Math.random() * 2.75),
-      });
-      particles.push(particle);
-      nextSpawnAt = time + 38 + Math.random() * 155;
+    const updateGlyphs = (stream: RainStream, time: number) => {
+      if (time < stream.nextGlyphAt) return;
+      for (let index = 0; index < stream.glyphs.length; index += 1) {
+        if (Math.random() > 0.48) stream.glyphs[index] = randomGlyph();
+      }
+      stream.nextGlyphAt = time + (stream.ambient ? 150 : 70) + Math.random() * 180;
+    };
+
+    const drawStream = (stream: RainStream, time: number) => {
+      if (!context || time < stream.delayUntil) return;
+      updateGlyphs(stream, time);
+      context.font = '12px "IBM Plex Mono", monospace';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+
+      for (let index = stream.length - 1; index >= 0; index -= 1) {
+        const y = stream.headY - index * stream.spacing;
+        if (y < stream.originY || y > height + stream.spacing) continue;
+        const strength = 1 - index / stream.length;
+        const color =
+          activeMode.rain[(stream.colorOffset + index) % activeMode.rain.length] ??
+          activeMode.accent;
+        context.save();
+        context.globalAlpha = stream.ambient ? 0.18 + strength * 0.42 : 0.12 + strength * 0.76;
+        context.fillStyle = color;
+        if (stream.ambient && index === 0) {
+          context.globalAlpha = 0.68;
+          context.shadowBlur = 4;
+          context.shadowColor = color;
+        }
+        if (!stream.ambient && index === 0) {
+          context.globalAlpha = 0.96;
+          context.shadowBlur = 10;
+          context.shadowColor = color;
+        }
+        context.fillText(stream.glyphs[index] ?? randomGlyph(), stream.x, y);
+        context.restore();
+      }
+    };
+
+    const maskLogoCoverage = () => {
+      if (!context) return;
+      context.save();
+      context.globalCompositeOperation = 'destination-out';
+      context.fillStyle = '#000';
+      context.font = logoMaskFont;
+      context.textAlign = 'left';
+      context.textBaseline = 'alphabetic';
+      for (const line of logoInkLines) context.fillText(line.text, line.x, line.baselineY);
+      context.restore();
     };
 
     const typeLogo = (time: number) => {
@@ -371,8 +400,12 @@ const logoText = String.raw`    ___ ____          __             __
       if (characterCount >= fullText.length) {
         typingComplete = true;
         logo.dataset.typing = 'false';
-        nextSpawnAt = time + 180;
-        revealTerminal();
+        stage.dataset.terminalReady = 'true';
+        primeLogoStreams(time);
+        if (desktopTerminal.matches && terminalInput) {
+          terminalInput.disabled = false;
+          window.setTimeout(() => terminalInput.focus({ preventScroll: true }), 120);
+        }
       }
     };
 
@@ -381,63 +414,56 @@ const logoText = String.raw`    ___ ____          __             __
       if (!context || reducedMotion.matches || document.hidden || !visible) return;
       typeLogo(time);
       if (lastTime === 0) lastTime = time;
-      const elapsed = Math.min((time - lastTime) / 1000, 0.05);
-      if (elapsed < 1 / 45) return;
+      const frameInterval = mobileViewport.matches ? 1000 / 24 : 1000 / 32;
+      if (time - lastTime < frameInterval) return;
+      const elapsed = Math.min((time - lastTime) / 1000, 0.065);
       lastTime = time;
       context.clearRect(0, 0, width, height);
 
-      if (typingComplete && time >= nextSpawnAt) {
-        createParticle(time);
-        if (Math.random() > 0.74) createParticle(time);
+      for (const stream of ambientStreams) {
+        if (time >= stream.delayUntil) stream.headY += stream.speed * elapsed;
+        if (stream.headY - stream.length * stream.spacing > height + 20) {
+          resetAmbientStream(stream, time);
+        }
+        drawStream(stream, time);
       }
 
-      for (let index = particles.length - 1; index >= 0; index -= 1) {
-        const particle = particles[index];
-        particle.age += elapsed;
-        particle.velocity += particle.gravity * elapsed;
-        particle.y += particle.velocity * elapsed;
-        particle.x += particle.drift * elapsed;
-        particle.rotation += particle.angularVelocity * elapsed;
-        const opacity = particle.alpha * Math.max(0, 1 - particle.age / particle.life);
-        context.save();
-        context.translate(particle.x, particle.y);
-        context.rotate(particle.rotation);
-        context.font = `${particle.size}px "IBM Plex Mono", monospace`;
-        context.globalAlpha = opacity;
-        context.fillStyle = particle.color;
-        context.shadowBlur = 7;
-        context.shadowColor = particle.color;
-        context.fillText(particle.glyph, 0, 0);
-        context.restore();
-        if (particle.y > height + 20 || particle.age >= particle.life) {
-          particles.splice(index, 1);
-          pool.push(particle);
+      if (typingComplete) {
+        for (const stream of logoStreams) {
+          if (time >= stream.delayUntil) stream.headY += stream.speed * elapsed;
+          if (stream.headY - stream.length * stream.spacing > height + 20) {
+            resetLogoStream(stream, time);
+          }
+          drawStream(stream, time);
         }
       }
+      maskLogoCoverage();
     };
 
-    if (reducedMotion.matches) {
-      output.textContent = fullText;
-      shimmer.textContent = fullText;
-      logo.dataset.typing = 'false';
-      typingComplete = true;
-      revealTerminal();
-    }
+    const updateTerminalValue = () => {
+      if (terminalValue) terminalValue.textContent = terminalInput?.value.toUpperCase() ?? '';
+    };
 
-    applyColourMode(activeMode);
+    const requestNavigation = (path: string) => {
+      const href = `${routeBase}${path}` || '/';
+      window.dispatchEvent(new CustomEvent('lifesteal:navigate', { detail: { href } }));
+    };
 
     terminalForm?.addEventListener('submit', (event) => {
       event.preventDefault();
       if (!terminalInput) return;
       const submitted = terminalInput.value.trim().toUpperCase();
-      const command = commandAliases[submitted] ?? submitted;
-      const mode = colourModes[command];
-      if (mode) applyColourMode(mode);
+      const mode = resolveThemeCommand(submitted);
+      const route = routeCommands[submitted];
+      if (mode) {
+        applyVisualMode(mode);
+        applyTheme(mode);
+      } else if (route) requestNavigation(route);
       terminalInput.value = '';
-      updateTerminalCursor();
+      updateTerminalValue();
     });
     for (const eventName of ['input', 'keyup', 'click', 'select']) {
-      terminalInput?.addEventListener(eventName, updateTerminalCursor);
+      terminalInput?.addEventListener(eventName, updateTerminalValue);
     }
     stage.addEventListener('pointerdown', (event) => {
       if (
@@ -448,6 +474,22 @@ const logoText = String.raw`    ___ ____          __             __
         terminalInput?.focus({ preventScroll: true });
       }
     });
+
+    const handleTheme = (event: Event) => {
+      const mode = (event as CustomEvent<ThemeMode>).detail;
+      if (mode) applyVisualMode(mode);
+    };
+    window.addEventListener('lifesteal:theme', handleTheme);
+    applyVisualMode(activeMode);
+
+    if (reducedMotion.matches) {
+      output.textContent = fullText;
+      shimmer.textContent = fullText;
+      logo.dataset.typing = 'false';
+      typingComplete = true;
+      stage.dataset.terminalReady = 'true';
+      if (desktopTerminal.matches && terminalInput) terminalInput.disabled = false;
+    }
 
     resize();
     document.fonts?.ready.then(resize);
@@ -466,6 +508,7 @@ const logoText = String.raw`    ___ ____          __             __
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
+      window.removeEventListener('lifesteal:theme', handleTheme);
     });
   }
 </script>

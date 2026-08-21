@@ -26,6 +26,7 @@ test.describe('site shell', () => {
 
   test('navigation reaches every primary page', async ({ page }) => {
     await page.goto(siteUrl('/'));
+    await page.evaluate(() => sessionStorage.setItem('lifesteal.newsletterGateSeen', 'true'));
     for (const label of ['artists', 'releases', 'radio', 'store', 'about']) {
       await page.locator(`nav a[href="${siteUrl(`/${label}/`)}"]`).click();
       await expect(page).toHaveURL(new RegExp(`/${label}/(?:#.*)?$`));
@@ -43,7 +44,7 @@ test('landing presents the ASCII signal and respects reduced motion', async ({ p
   await expect(page.getByText('LIFESTEAL // HOME')).toBeVisible();
   await expect(page.getByText('FOUNDED 2021')).toBeVisible();
   await expect(page.getByText('INDEPENDENT AUDIO // NAARM')).toBeVisible();
-  await expect(page.locator('[data-drip-canvas]')).toHaveCSS('display', 'none');
+  await expect(page.locator('[data-rain-canvas]')).toHaveCSS('display', 'none');
   await expect(page.locator('.site-footer__rule')).toHaveCount(0);
   await expect(page.getByText('EOF', { exact: true })).toHaveCount(0);
 });
@@ -87,14 +88,108 @@ test('header prism plays only when the wordmark is hovered', async ({ page }) =>
   const wordmark = page.locator('.wordmark');
   const animationName = () =>
     wordmark.evaluate((element) => getComputedStyle(element, '::after').animationName);
+  const prismOpacity = () =>
+    wordmark.evaluate((element) => getComputedStyle(element, '::after').opacity);
 
   expect(await animationName()).toBe('none');
+  await expect(wordmark).toHaveCSS('text-shadow', 'none');
+  expect(await prismOpacity()).toBe('0');
   await wordmark.hover();
   expect(await animationName()).toBe('wordmark-prism');
+  expect(await prismOpacity()).toBe('1');
   await page.mouse.move(900, 500);
   expect(await animationName()).toBe('none');
+  expect(await prismOpacity()).toBe('0');
   await wordmark.hover();
   expect(await animationName()).toBe('wordmark-prism');
+});
+
+test('terminal text aligns with its prompt and persisted flag themes clip through the logo', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The command terminal is intentionally desktop-only.');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(siteUrl('/'));
+  const terminal = page.locator('[data-terminal-input]');
+  await terminal.fill('TRANS');
+  const geometry = await page.evaluate(() => {
+    const prompt = document.querySelector('.ascii-terminal__prompt')?.getBoundingClientRect();
+    const value = document.querySelector('.ascii-terminal__value')?.getBoundingClientRect();
+    return { promptTop: prompt?.top ?? 0, valueTop: value?.top ?? 0 };
+  });
+  expect(Math.abs(geometry.promptTop - geometry.valueTop)).toBeLessThanOrEqual(1);
+  await terminal.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'transgender');
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-ascii-output]')
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    )
+    .toContain('rgb(91, 206, 250)');
+
+  await terminal.fill('ABORIGINAL');
+  await terminal.press('Enter');
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-ascii-output]')
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    )
+    .toContain('rgb(255, 207, 0)');
+
+  await page.goto(siteUrl('/about/'));
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'aboriginal');
+  const accent = await page
+    .locator('html')
+    .evaluate((element) => getComputedStyle(element).getPropertyValue('--accent').trim());
+  expect(accent).toBe('#dd0000');
+});
+
+test('home navigation shows the newsletter gate only once per site visit', async ({
+  page,
+  isMobile,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(siteUrl('/'));
+  if (isMobile) {
+    await page.locator(`nav a[href="${siteUrl('/artists/')}"]`).click();
+  } else {
+    const terminal = page.locator('[data-terminal-input]');
+    await terminal.fill('artists');
+    await terminal.press('Enter');
+  }
+  await expect(page.getByRole('dialog', { name: 'intercept the signal.' })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`${sitePath}/?$`));
+  await page.getByRole('button', { name: 'CONTINUE WITHOUT SIGNING UP' }).click();
+  await expect(page).toHaveURL(/\/artists\/(?:#.*)?$/);
+
+  await page.goto(siteUrl('/'));
+  await page.locator(`nav a[href="${siteUrl('/releases/')}"]`).click();
+  await expect(page).toHaveURL(/\/releases\/(?:#.*)?$/);
+  await expect(page.locator('[data-newsletter-gate]')).not.toBeVisible();
+});
+
+test('newsletter signup posts an identifiable home-gate record before continuing', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  let submitted: Record<string, string> = {};
+  await page.route('https://newsletter.lifesteal.world/subscribe', async (route) => {
+    submitted = route.request().postDataJSON() as Record<string, string>;
+    await route.fulfill({ status: 201, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.goto(siteUrl('/'));
+  await page.locator(`nav a[href="${siteUrl('/radio/')}"]`).click();
+  await page.getByLabel('EMAIL ADDRESS').fill('listener@example.com');
+  await page.getByRole('button', { name: 'JOIN SIGNAL' }).click();
+  await expect(page.getByText('SIGNAL RECEIVED // SUBSCRIBED')).toBeVisible();
+  expect(submitted).toMatchObject({
+    email: 'listener@example.com',
+    source: 'homepage_gate',
+  });
+  await expect(page).toHaveURL(/\/radio\/$/);
 });
 
 test('artist browser is keyboard-operable and deep-linkable', async ({ page }) => {
