@@ -84,6 +84,7 @@ const logoText = String.raw`    ___ ____          __             __
     const desktopTerminal = window.matchMedia('(min-width: 901px)');
     const mobileViewport = window.matchMedia('(max-width: 700px)');
     const typingDuration = 5000;
+    const typingTick = 72;
     const glyphs = [
       'ア',
       'イ',
@@ -204,6 +205,7 @@ const logoText = String.raw`    ___ ____          __             __
     let width = 0;
     let height = 0;
     let typingComplete = false;
+    let typedCharacterCount = -1;
     let visible = true;
     let activeMode = applyStoredTheme();
     let logoMaskFont = '';
@@ -344,15 +346,23 @@ const logoText = String.raw`    ___ ____          __             __
     };
 
     const drawStream = (stream: RainStream, time: number) => {
-      if (!context || time < stream.delayUntil) return;
+      if (
+        !context ||
+        time < stream.delayUntil ||
+        stream.headY < 0 ||
+        stream.headY - stream.length * stream.spacing > height
+      ) {
+        return false;
+      }
       updateGlyphs(stream, time);
       context.font = '12px "IBM Plex Mono", monospace';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
+      let drewGlyph = false;
 
       for (let index = stream.length - 1; index >= 0; index -= 1) {
         const y = stream.headY - index * stream.spacing;
-        if (y < stream.originY || y > height + stream.spacing) continue;
+        if (y < 0 || y < stream.originY || y > height + stream.spacing) continue;
         const strength = 1 - index / stream.length;
         const color =
           activeMode.rain[(stream.colorOffset + index) % activeMode.rain.length] ??
@@ -372,7 +382,9 @@ const logoText = String.raw`    ___ ____          __             __
         }
         context.fillText(stream.glyphs[index] ?? randomGlyph(), stream.x, y);
         context.restore();
+        drewGlyph = true;
       }
+      return drewGlyph;
     };
 
     const maskLogoCoverage = () => {
@@ -391,12 +403,18 @@ const logoText = String.raw`    ___ ____          __             __
       if (typingComplete) return;
       const startedAt = Number(logo.dataset.typingStarted ?? time);
       logo.dataset.typingStarted = String(startedAt);
-      const characterCount = Math.min(
-        fullText.length,
-        Math.floor(((time - startedAt) / typingDuration) * fullText.length),
-      );
-      output.textContent = fullText.slice(0, characterCount);
-      shimmer.textContent = output.textContent;
+      const elapsed = Math.min(typingDuration, time - startedAt);
+      const totalTicks = Math.ceil(typingDuration / typingTick);
+      const completedTicks = Math.floor(elapsed / typingTick);
+      const characterCount =
+        elapsed >= typingDuration
+          ? fullText.length
+          : Math.min(fullText.length, Math.floor((completedTicks / totalTicks) * fullText.length));
+      if (characterCount !== typedCharacterCount) {
+        typedCharacterCount = characterCount;
+        output.textContent = fullText.slice(0, characterCount);
+        shimmer.textContent = output.textContent;
+      }
       if (characterCount >= fullText.length) {
         typingComplete = true;
         logo.dataset.typing = 'false';
@@ -419,13 +437,14 @@ const logoText = String.raw`    ___ ____          __             __
       const elapsed = Math.min((time - lastTime) / 1000, 0.065);
       lastTime = time;
       context.clearRect(0, 0, width, height);
+      let drewRain = false;
 
       for (const stream of ambientStreams) {
         if (time >= stream.delayUntil) stream.headY += stream.speed * elapsed;
         if (stream.headY - stream.length * stream.spacing > height + 20) {
           resetAmbientStream(stream, time);
         }
-        drawStream(stream, time);
+        drewRain = drawStream(stream, time) || drewRain;
       }
 
       if (typingComplete) {
@@ -434,10 +453,10 @@ const logoText = String.raw`    ___ ____          __             __
           if (stream.headY - stream.length * stream.spacing > height + 20) {
             resetLogoStream(stream, time);
           }
-          drawStream(stream, time);
+          drewRain = drawStream(stream, time) || drewRain;
         }
       }
-      maskLogoCoverage();
+      if (drewRain) maskLogoCoverage();
     };
 
     const updateTerminalValue = () => {
