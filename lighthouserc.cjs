@@ -16,6 +16,9 @@ module.exports = {
       puppeteerLaunchOptions: {
         args: ['--force-prefers-reduced-motion=reduce'],
       },
+      settings: {
+        preset: 'desktop',
+      },
     },
     assert: {
       assertions: {
