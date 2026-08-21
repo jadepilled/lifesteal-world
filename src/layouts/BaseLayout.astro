@@ -7,6 +7,7 @@ import '@fontsource/ibm-plex-mono/500.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import NewsletterGate from '../components/NewsletterGate.astro';
 import { withBase } from '../lib/base';
 import '../styles/global.css';
 
@@ -61,6 +62,12 @@ const socialImage = new URL(withBase(image), Astro.site);
     <main id="main-content" class:list={['site-main', mainClass]}>
       <slot />
     </main>
-    <Footer />
+    <Footer showRule={page !== 'home'} />
+    <NewsletterGate />
+    <script>
+      import { applyStoredTheme } from '../lib/theme';
+
+      applyStoredTheme();
+    </script>
   </body>
 </html>

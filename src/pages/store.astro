@@ -1,5 +1,4 @@
 ---
-import PageHeading from '../components/PageHeading.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { artistById, presaves } from '../lib/content';
 import { withBase } from '../lib/base';
@@ -10,13 +9,6 @@ import { withBase } from '../lib/base';
   description="Pre-save forthcoming LIFESTEAL releases AUDIOCLUB and LIFE IS BEAUTIFUL."
   page="store"
 >
-  <PageHeading
-    route="STORE"
-    title="store"
-    intro="Forthcoming LIFESTEAL transmissions. There is no checkout, account, or hidden cost—only direct release routing when each distributor link becomes active."
-    status="NO CHARGE"
-  />
-
   <div class="store-grid">
     {
       presaves.map((entry, index) => {
@@ -80,12 +72,17 @@ import { withBase } from '../lib/base';
 <style>
   .store-grid {
     display: grid;
+    min-height: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: 1;
     gap: clamp(24px, 4vw, 64px);
   }
 
   .store-item {
     position: relative;
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--item-accent), transparent 58%);
     background:
@@ -115,14 +112,15 @@ import { withBase } from '../lib/base';
 
   .store-item__artwork {
     width: 100%;
-    height: auto;
+    height: 100%;
+    min-height: 0;
     border-bottom: 1px solid color-mix(in srgb, var(--item-accent), transparent 62%);
     aspect-ratio: 1;
     object-fit: contain;
   }
 
   .store-item__copy {
-    padding: clamp(28px, 4vw, 54px);
+    padding: clamp(17px, 2.4vh, 28px) clamp(22px, 3vw, 40px);
   }
 
   .store-item__artist {
@@ -133,9 +131,9 @@ import { withBase } from '../lib/base';
   }
 
   .store-item h2 {
-    margin: 2px 0 24px;
+    margin: 2px 0 clamp(9px, 1.4vh, 16px);
     font-family: var(--display);
-    font-size: clamp(58px, 6.6vw, 104px);
+    font-size: clamp(46px, 7vh, 76px);
     font-weight: 900;
     line-height: 0.82;
     letter-spacing: -0.055em;
@@ -144,16 +142,19 @@ import { withBase } from '../lib/base';
 
   .store-item__copy > p:last-of-type {
     max-width: 610px;
+    margin-bottom: 0;
     color: color-mix(in srgb, var(--item-fg), transparent 22%);
+    font-size: clamp(10px, 1.25vh, 13px);
+    line-height: 1.45;
   }
 
   .store-item__action {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 50px;
+    min-height: 40px;
     padding: 12px 15px;
-    margin-top: 30px;
+    margin-top: clamp(10px, 1.6vh, 18px);
     border: 1px solid var(--item-accent);
     color: var(--item-fg);
     font-size: 11px;
@@ -179,6 +180,15 @@ import { withBase } from '../lib/base';
   @media (max-width: 850px) {
     .store-grid {
       grid-template-columns: 1fr;
+      flex: none;
+    }
+
+    .store-item {
+      grid-template-rows: auto auto auto;
+    }
+
+    .store-item__artwork {
+      height: auto;
     }
   }
 </style>

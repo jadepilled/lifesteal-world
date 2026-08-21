@@ -8,13 +8,20 @@
     "location": "Melbourne, Australia",
     "biography": "HAZELMERE brings nostalgic, whimsical, and euphoric music with no shortage of intensity within the hardstyle, uptempo, and tekk niche. With a deep love for 2000s-era sounds, she creates emotional and catchy melodies coupled with rhythmic, pulsing basses. She has a love for experimentation and tries to bring a fresh take to every song, unbound by the confines of any one genre.",
     "portrait": {
-      "src": "/assets/artists/hazelmere-portrait.png",
+      "src": "/assets/artists/hazelmere-portrait.webp",
       "alt": "Red-toned portrait of HAZELMERE",
       "focalPoint": "50% 45%"
     },
     "mark": {
       "src": "/assets/artists/hazelmere-mark.png",
       "alt": "HAZELMERE artist mark"
+    },
+    "palette": {
+      "background": "#000000",
+      "surface": "#100404",
+      "foreground": "#fff5f5",
+      "accent": "#f02b31",
+      "glow": "#ff3840"
     },
     "spotifyArtistId": null,
     "soundcloudProfileUrl": "https://soundcloud.com/hazelmere/",
@@ -43,6 +50,13 @@
       "src": "/assets/artists/starstrike-portrait.webp",
       "alt": "Pink halftone portrait artwork for starstrike",
       "focalPoint": "50% 50%"
+    },
+    "palette": {
+      "background": "#080609",
+      "surface": "#1a121c",
+      "foreground": "#fff8ff",
+      "accent": "#dda6ef",
+      "glow": "#f4a6ef"
     },
     "spotifyArtistId": "4MkRcUXF9bFAN8mxl8Cc7h",
     "soundcloudProfileUrl": "https://soundcloud.com/starstrike/",

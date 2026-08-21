@@ -1,115 +1,533 @@
-<div class="ascii-stage" data-ascii-stage>
-  <div class="ascii-stage__status" aria-hidden="true">
-    <span>SYS.LABEL / LIFESTEAL</span>
-    <span>2021—2026</span>
-  </div>
-  <canvas class="ascii-stage__canvas" data-drip-canvas aria-hidden="true"></canvas>
-  <pre
-    class="ascii-logo"
-    aria-hidden="true"
-    data-ascii-logo>
-    ___ ____          __             __
+---
+const logoText = String.raw`    ___ ____          __             __
    / (_) __/__  _____/ /____  ____ _/ /
-  / / / /_/ _ \/ ___/ __/ _ \/ __ `/ /
+  / / / /_/ _ \/ ___/ __/ _ \/ __ '/ /
  / / / __/  __(__  ) /_/  __/ /_/ / /
-/_/_/_/  \___/____/\__/\___/\__,_/_/
-  </pre>
+/_/_/_/  \___/____/\__/\___/\__,_/_/`;
+---
+
+<div class="ascii-stage" data-ascii-stage data-colour-mode="default">
+  <div class="ascii-stage__status" aria-hidden="true">
+    <span>LIFESTEAL // HOME</span>
+    <span>FOUNDED 2021</span>
+  </div>
+  <canvas class="ascii-stage__canvas" data-rain-canvas aria-hidden="true"></canvas>
+  <div class="ascii-console">
+    <pre
+      class="ascii-logo"
+      aria-hidden="true"
+      data-ascii-logo
+      data-typing="true"><span class="ascii-logo__measure" data-ascii-source>{logoText}</span><span class="ascii-logo__output" data-ascii-output /><span class="ascii-logo__shimmer prism-text" data-ascii-shimmer /></pre>
+    <form class="ascii-terminal" data-terminal-form autocomplete="off">
+      <label class="visually-hidden" for="ascii-terminal-input"
+        >Enter a colour or page command</label
+      >
+      <span class="ascii-terminal__prompt" aria-hidden="true">C:\lifesteal\system&gt;</span>
+      <span class="ascii-terminal__entry">
+        <span class="ascii-terminal__value" data-terminal-value aria-hidden="true"></span>
+        <span class="ascii-terminal__cursor" aria-hidden="true"></span>
+        <input
+          id="ascii-terminal-input"
+          class="ascii-terminal__input"
+          data-terminal-input
+          type="text"
+          inputmode="text"
+          maxlength="24"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          disabled
+          aria-describedby="ascii-terminal-hint"
+        />
+      </span>
+      <span id="ascii-terminal-hint" class="visually-hidden"
+        >Enter a colour name or a page name, then press Enter.</span
+      >
+    </form>
+  </div>
   <span class="visually-hidden">lifesteal</span>
-  <p class="ascii-stage__tagline">INDEPENDENT AUDIO / NAARM / SIGNAL ACTIVE</p>
+  <p class="ascii-stage__tagline">INDEPENDENT AUDIO // NAARM</p>
 </div>
 
 <script>
-  type Particle = {
+  import { applyStoredTheme, applyTheme, resolveThemeCommand, type ThemeMode } from '../lib/theme';
+
+  type RainOrigin = { x: number; y: number };
+  type LogoInkLine = { baselineY: number; text: string; x: number };
+  type RainStream = {
+    ambient: boolean;
+    colorOffset: number;
+    delayUntil: number;
+    glyphs: string[];
+    headY: number;
+    length: number;
+    nextGlyphAt: number;
+    originY: number;
+    spacing: number;
+    speed: number;
     x: number;
-    y: number;
-    velocity: number;
-    alpha: number;
-    glyph: string;
-    size: number;
   };
 
   const stage = document.querySelector<HTMLElement>('[data-ascii-stage]');
   const logo = stage?.querySelector<HTMLElement>('[data-ascii-logo]');
-  const canvas = stage?.querySelector<HTMLCanvasElement>('[data-drip-canvas]');
+  const source = stage?.querySelector<HTMLElement>('[data-ascii-source]');
+  const output = stage?.querySelector<HTMLElement>('[data-ascii-output]');
+  const shimmer = stage?.querySelector<HTMLElement>('[data-ascii-shimmer]');
+  const canvas = stage?.querySelector<HTMLCanvasElement>('[data-rain-canvas]');
+  const terminalForm = stage?.querySelector<HTMLFormElement>('[data-terminal-form]');
+  const terminalInput = stage?.querySelector<HTMLInputElement>('[data-terminal-input]');
+  const terminalValue = stage?.querySelector<HTMLElement>('[data-terminal-value]');
 
-  if (stage && logo && canvas) {
-    const context = canvas.getContext('2d');
+  if (stage && logo && source && output && shimmer && canvas) {
+    const context = canvas.getContext('2d', { alpha: true });
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const glyphs = ['/', '\\', '|', ':', '.', '1', '0', '+', '*'];
-    const particles: Particle[] = [];
+    const desktopTerminal = window.matchMedia('(min-width: 901px)');
+    const mobileViewport = window.matchMedia('(max-width: 700px)');
+    const typingDuration = 5000;
+    const typingTick = 72;
+    const glyphs = [
+      'ア',
+      'イ',
+      'ウ',
+      'エ',
+      'オ',
+      'カ',
+      'キ',
+      'ク',
+      'ケ',
+      'コ',
+      'サ',
+      'シ',
+      'ス',
+      'セ',
+      'ソ',
+      'タ',
+      'チ',
+      'ツ',
+      'テ',
+      'ト',
+      'ナ',
+      'ニ',
+      'ヌ',
+      'ネ',
+      'ノ',
+      'ハ',
+      'ヒ',
+      'フ',
+      'ヘ',
+      'ホ',
+      'マ',
+      'ミ',
+      'ム',
+      'メ',
+      'モ',
+      'ヤ',
+      'ユ',
+      'ヨ',
+      'ラ',
+      'リ',
+      'ル',
+      'レ',
+      'ロ',
+      'ワ',
+      'ヲ',
+      'ン',
+      'あ',
+      'い',
+      'う',
+      'え',
+      'お',
+      'か',
+      'き',
+      'く',
+      'け',
+      'こ',
+      'さ',
+      'し',
+      'す',
+      'せ',
+      'そ',
+      'た',
+      'ち',
+      'つ',
+      'て',
+      'と',
+      'な',
+      'に',
+      'ぬ',
+      'ね',
+      'の',
+      'は',
+      'ひ',
+      'ふ',
+      'へ',
+      'ほ',
+      'ま',
+      'み',
+      'む',
+      'め',
+      'も',
+      'や',
+      'ゆ',
+      'よ',
+      'ら',
+      'り',
+      'る',
+      'れ',
+      'ろ',
+      'わ',
+      'を',
+      'ん',
+      '0',
+      '1',
+      ':',
+      '+',
+      '*',
+    ];
+    const fullText = source.textContent ?? '';
+    const origins: RainOrigin[] = [];
+    const logoInkLines: LogoInkLine[] = [];
+    const logoStreams: RainStream[] = [];
+    const ambientStreams: RainStream[] = [];
+    const routeBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const routeCommands: Record<string, string> = {
+      HOME: '/',
+      ARTIST: '/artists/',
+      ARTISTS: '/artists/',
+      RELEASE: '/releases/',
+      RELEASES: '/releases/',
+      RADIO: '/radio/',
+      STORE: '/store/',
+      ABOUT: '/about/',
+    };
     let frame = 0;
     let lastTime = 0;
     let width = 0;
     let height = 0;
-    let logoBottom = 0;
-    let logoLeft = 0;
-    let logoWidth = 0;
+    let typingComplete = false;
+    let typedCharacterCount = -1;
+    let visible = true;
+    let activeMode = applyStoredTheme();
+    let logoMaskFont = '';
+
+    const randomGlyph = () => glyphs[Math.floor(Math.random() * glyphs.length)] ?? 'ア';
+
+    const applyVisualMode = (mode: ThemeMode) => {
+      activeMode = mode;
+      stage.dataset.colourMode = mode.name;
+      stage.style.setProperty('--terminal-primary', mode.accent);
+    };
+
+    const createGlyphTrail = (length: number) => Array.from({ length }, () => randomGlyph());
+
+    const resetLogoStream = (stream: RainStream, time: number, initial = false) => {
+      const origin = origins[Math.floor(Math.random() * origins.length)];
+      if (!origin) return;
+      stream.ambient = false;
+      stream.x = origin.x;
+      stream.originY = origin.y + 1;
+      stream.headY = stream.originY;
+      stream.speed = 38 + Math.random() * 54;
+      stream.spacing = 11 + Math.random() * 4;
+      stream.length = 5 + Math.floor(Math.random() * 8);
+      stream.glyphs = createGlyphTrail(stream.length);
+      stream.nextGlyphAt = time + 60 + Math.random() * 130;
+      stream.delayUntil = initial ? Number.POSITIVE_INFINITY : time + 280 + Math.random() * 1500;
+      stream.colorOffset = Math.floor(Math.random() * activeMode.rain.length);
+    };
+
+    const resetAmbientStream = (stream: RainStream, time: number, initial = false, order = 0) => {
+      const grid = 13;
+      stream.ambient = true;
+      stream.x = Math.round((Math.random() * width) / grid) * grid;
+      stream.speed = 20 + Math.random() * 34;
+      stream.spacing = 13 + Math.random() * 4;
+      stream.length = 8 + Math.floor(Math.random() * 10);
+      stream.originY = -stream.length * stream.spacing - 12;
+      stream.headY = -8 - Math.random() * 36;
+      stream.glyphs = createGlyphTrail(stream.length);
+      stream.nextGlyphAt = time + 120 + Math.random() * 260;
+      stream.delayUntil = initial
+        ? time + 180 + order * (mobileViewport.matches ? 240 : 180) + Math.random() * 520
+        : time + 240 + Math.random() * 1400;
+      stream.colorOffset = Math.floor(Math.random() * activeMode.rain.length);
+    };
+
+    const primeLogoStreams = (time: number) => {
+      for (let index = 0; index < logoStreams.length; index += 1) {
+        const stream = logoStreams[index];
+        if (!stream) continue;
+        resetLogoStream(stream, time);
+        stream.delayUntil = time + 160 + index * 86 + Math.random() * 420;
+      }
+    };
+
+    const rebuildGeometry = () => {
+      if (!context) return;
+      origins.length = 0;
+      logoInkLines.length = 0;
+      const stageRect = stage.getBoundingClientRect();
+      const logoRect = logo.getBoundingClientRect();
+      const style = getComputedStyle(logo);
+      const fontSize = Number.parseFloat(style.fontSize);
+      const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.1;
+      logoMaskFont = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+      context.font = logoMaskFont;
+      const characterWidth = context.measureText('0').width;
+      const lines = fullText.split('\n');
+      const columns = Math.max(...lines.map((line) => line.length));
+      const logoLeft = logoRect.left - stageRect.left;
+      const logoTop = logoRect.top - stageRect.top;
+
+      for (let row = 0; row < lines.length; row += 1) {
+        const line = lines[row] ?? '';
+        if (/\S/.test(line)) {
+          const metrics = context.measureText(line);
+          const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+          const descent = metrics.actualBoundingBoxDescent || fontSize * 0.2;
+          logoInkLines.push({
+            x: logoLeft,
+            baselineY: logoTop + row * lineHeight + (lineHeight - ascent - descent) / 2 + ascent,
+            text: line,
+          });
+        }
+      }
+
+      for (let column = 0; column < columns; column += 1) {
+        let lastInkRow = -1;
+        for (let row = 0; row < lines.length; row += 1) {
+          if ((lines[row]?.[column] ?? ' ') !== ' ') lastInkRow = row;
+        }
+        if (lastInkRow >= 0) {
+          origins.push({
+            x: logoLeft + (column + 0.5) * characterWidth,
+            y: logoTop + (lastInkRow + 0.92) * lineHeight,
+          });
+        }
+      }
+
+      logoStreams.length = 0;
+      ambientStreams.length = 0;
+      const emittedCount = Math.min(origins.length, mobileViewport.matches ? 15 : 34);
+      const ambientCount = mobileViewport.matches ? 15 : 32;
+      const now = performance.now();
+      for (let index = 0; index < emittedCount; index += 1) {
+        const stream = {} as RainStream;
+        resetLogoStream(stream, now, true);
+        logoStreams.push(stream);
+      }
+      if (typingComplete) primeLogoStreams(now);
+      for (let index = 0; index < ambientCount; index += 1) {
+        const stream = {} as RainStream;
+        resetAmbientStream(stream, now, true, index);
+        ambientStreams.push(stream);
+      }
+    };
 
     const resize = () => {
       const stageRect = stage.getBoundingClientRect();
-      const logoRect = logo.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const ratio = Math.min(window.devicePixelRatio || 1, mobileViewport.matches ? 1.2 : 1.4);
       width = stageRect.width;
       height = stageRect.height;
-      logoLeft = logoRect.left - stageRect.left;
-      logoWidth = logoRect.width;
-      logoBottom = logoRect.bottom - stageRect.top - 4;
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       context?.setTransform(ratio, 0, 0, ratio, 0, 0);
+      rebuildGeometry();
     };
 
-    const spawn = () => {
-      const streamX = logoLeft + Math.random() * logoWidth;
-      particles.push({
-        x: streamX,
-        y: logoBottom + Math.random() * 8,
-        velocity: 0.3 + Math.random() * 1.1,
-        alpha: 0.35 + Math.random() * 0.6,
-        glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
-        size: 8 + Math.floor(Math.random() * 7),
-      });
+    const updateGlyphs = (stream: RainStream, time: number) => {
+      if (time < stream.nextGlyphAt) return;
+      for (let index = 0; index < stream.glyphs.length; index += 1) {
+        if (Math.random() > 0.48) stream.glyphs[index] = randomGlyph();
+      }
+      stream.nextGlyphAt = time + (stream.ambient ? 150 : 70) + Math.random() * 180;
+    };
+
+    const drawStream = (stream: RainStream, time: number) => {
+      if (
+        !context ||
+        time < stream.delayUntil ||
+        stream.headY < 0 ||
+        stream.headY - stream.length * stream.spacing > height
+      ) {
+        return false;
+      }
+      updateGlyphs(stream, time);
+      context.font = '12px "IBM Plex Mono", monospace';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      let drewGlyph = false;
+
+      for (let index = stream.length - 1; index >= 0; index -= 1) {
+        const y = stream.headY - index * stream.spacing;
+        if (y < 0 || y < stream.originY || y > height + stream.spacing) continue;
+        const strength = 1 - index / stream.length;
+        const color =
+          activeMode.rain[(stream.colorOffset + index) % activeMode.rain.length] ??
+          activeMode.accent;
+        context.save();
+        context.globalAlpha = stream.ambient ? 0.18 + strength * 0.42 : 0.12 + strength * 0.76;
+        context.fillStyle = color;
+        if (stream.ambient && index === 0) {
+          context.globalAlpha = 0.68;
+          context.shadowBlur = 4;
+          context.shadowColor = color;
+        }
+        if (!stream.ambient && index === 0) {
+          context.globalAlpha = 0.96;
+          context.shadowBlur = 10;
+          context.shadowColor = color;
+        }
+        context.fillText(stream.glyphs[index] ?? randomGlyph(), stream.x, y);
+        context.restore();
+        drewGlyph = true;
+      }
+      return drewGlyph;
+    };
+
+    const maskLogoCoverage = () => {
+      if (!context) return;
+      context.save();
+      context.globalCompositeOperation = 'destination-out';
+      context.fillStyle = '#000';
+      context.font = logoMaskFont;
+      context.textAlign = 'left';
+      context.textBaseline = 'alphabetic';
+      for (const line of logoInkLines) context.fillText(line.text, line.x, line.baselineY);
+      context.restore();
+    };
+
+    const typeLogo = (time: number) => {
+      if (typingComplete) return;
+      const startedAt = Number(logo.dataset.typingStarted ?? time);
+      logo.dataset.typingStarted = String(startedAt);
+      const elapsed = Math.min(typingDuration, time - startedAt);
+      const totalTicks = Math.ceil(typingDuration / typingTick);
+      const completedTicks = Math.floor(elapsed / typingTick);
+      const characterCount =
+        elapsed >= typingDuration
+          ? fullText.length
+          : Math.min(fullText.length, Math.floor((completedTicks / totalTicks) * fullText.length));
+      if (characterCount !== typedCharacterCount) {
+        typedCharacterCount = characterCount;
+        output.textContent = fullText.slice(0, characterCount);
+        shimmer.textContent = output.textContent;
+      }
+      if (characterCount >= fullText.length) {
+        typingComplete = true;
+        logo.dataset.typing = 'false';
+        stage.dataset.terminalReady = 'true';
+        primeLogoStreams(time);
+        if (desktopTerminal.matches && terminalInput) {
+          terminalInput.disabled = false;
+          window.setTimeout(() => terminalInput.focus({ preventScroll: true }), 120);
+        }
+      }
     };
 
     const draw = (time: number) => {
-      if (!context || reducedMotion.matches || document.hidden) {
-        frame = requestAnimationFrame(draw);
-        return;
-      }
-      if (time - lastTime < 34) {
-        frame = requestAnimationFrame(draw);
-        return;
-      }
+      frame = requestAnimationFrame(draw);
+      if (!context || reducedMotion.matches || document.hidden || !visible) return;
+      typeLogo(time);
+      if (lastTime === 0) lastTime = time;
+      const frameInterval = mobileViewport.matches ? 1000 / 24 : 1000 / 32;
+      if (time - lastTime < frameInterval) return;
+      const elapsed = Math.min((time - lastTime) / 1000, 0.065);
       lastTime = time;
       context.clearRect(0, 0, width, height);
-      if (particles.length < 90 && Math.random() > 0.2) spawn();
-      if (particles.length < 90 && Math.random() > 0.7) spawn();
+      let drewRain = false;
 
-      for (let index = particles.length - 1; index >= 0; index -= 1) {
-        const particle = particles[index];
-        particle.y += particle.velocity;
-        particle.velocity += 0.012;
-        particle.alpha -= 0.0025;
-        context.font = `${particle.size}px "IBM Plex Mono", monospace`;
-        context.fillStyle = `rgba(255, 48, 79, ${Math.max(particle.alpha, 0)})`;
-        context.shadowBlur = 7;
-        context.shadowColor = '#ff304f';
-        context.fillText(particle.glyph, particle.x, particle.y);
-        if (particle.y > height || particle.alpha <= 0) particles.splice(index, 1);
+      for (const stream of ambientStreams) {
+        if (time >= stream.delayUntil) stream.headY += stream.speed * elapsed;
+        if (stream.headY - stream.length * stream.spacing > height + 20) {
+          resetAmbientStream(stream, time);
+        }
+        drewRain = drawStream(stream, time) || drewRain;
       }
-      frame = requestAnimationFrame(draw);
+
+      if (typingComplete) {
+        for (const stream of logoStreams) {
+          if (time >= stream.delayUntil) stream.headY += stream.speed * elapsed;
+          if (stream.headY - stream.length * stream.spacing > height + 20) {
+            resetLogoStream(stream, time);
+          }
+          drewRain = drawStream(stream, time) || drewRain;
+        }
+      }
+      if (drewRain) maskLogoCoverage();
     };
 
+    const updateTerminalValue = () => {
+      if (terminalValue) terminalValue.textContent = terminalInput?.value.toUpperCase() ?? '';
+    };
+
+    const requestNavigation = (path: string) => {
+      const href = `${routeBase}${path}` || '/';
+      window.dispatchEvent(new CustomEvent('lifesteal:navigate', { detail: { href } }));
+    };
+
+    terminalForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!terminalInput) return;
+      const submitted = terminalInput.value.trim().toUpperCase();
+      const mode = resolveThemeCommand(submitted);
+      const route = routeCommands[submitted];
+      if (mode) {
+        applyVisualMode(mode);
+        applyTheme(mode);
+      } else if (route) requestNavigation(route);
+      terminalInput.value = '';
+      updateTerminalValue();
+    });
+    for (const eventName of ['input', 'keyup', 'click', 'select']) {
+      terminalInput?.addEventListener(eventName, updateTerminalValue);
+    }
+    stage.addEventListener('pointerdown', (event) => {
+      if (
+        desktopTerminal.matches &&
+        stage.dataset.terminalReady === 'true' &&
+        !(event.target instanceof HTMLAnchorElement)
+      ) {
+        terminalInput?.focus({ preventScroll: true });
+      }
+    });
+
+    const handleTheme = (event: Event) => {
+      const mode = (event as CustomEvent<ThemeMode>).detail;
+      if (mode) applyVisualMode(mode);
+    };
+    window.addEventListener('lifesteal:theme', handleTheme);
+    applyVisualMode(activeMode);
+
+    if (reducedMotion.matches) {
+      output.textContent = fullText;
+      shimmer.textContent = fullText;
+      logo.dataset.typing = 'false';
+      typingComplete = true;
+      stage.dataset.terminalReady = 'true';
+      if (desktopTerminal.matches && terminalInput) terminalInput.disabled = false;
+    }
+
     resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(stage);
+    document.fonts?.ready.then(resize);
+    const resizeObserver = new ResizeObserver(resize);
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry?.isIntersecting ?? true;
+      },
+      { threshold: 0.05 },
+    );
+    resizeObserver.observe(stage);
+    visibilityObserver.observe(stage);
     frame = requestAnimationFrame(draw);
 
     document.addEventListener('astro:before-swap', () => {
       cancelAnimationFrame(frame);
-      observer.disconnect();
+      resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      window.removeEventListener('lifesteal:theme', handleTheme);
     });
   }
 </script>

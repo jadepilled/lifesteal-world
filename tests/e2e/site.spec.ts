@@ -13,6 +13,8 @@ test.describe('site shell', () => {
       await page.goto(siteUrl(route));
       await expect(page.locator('.wordmark')).toHaveText('lifesteal');
       await expect(page.locator('footer')).toContainText('LIFESTEAL acknowledges');
+      await expect(page.locator('.terminal-path')).toHaveCount(0);
+      await expect(page.locator('.page-heading p')).toHaveCount(0);
       const results = await new AxeBuilder({ page }).analyze();
       expect(
         results.violations.filter((violation) =>
@@ -24,9 +26,10 @@ test.describe('site shell', () => {
 
   test('navigation reaches every primary page', async ({ page }) => {
     await page.goto(siteUrl('/'));
+    await page.evaluate(() => sessionStorage.setItem('lifesteal.newsletterGateSeen', 'true'));
     for (const label of ['artists', 'releases', 'radio', 'store', 'about']) {
       await page.locator(`nav a[href="${siteUrl(`/${label}/`)}"]`).click();
-      await expect(page).toHaveURL(new RegExp(`/${label}/$`));
+      await expect(page).toHaveURL(new RegExp(`/${label}/(?:#.*)?$`));
       await page.goto(siteUrl('/'));
     }
   });
@@ -37,17 +40,167 @@ test('landing presents the ASCII signal and respects reduced motion', async ({ p
   await page.goto(siteUrl('/'));
   await expect(page.getByRole('heading', { name: 'LIFESTEAL' })).toBeVisible();
   await expect(page.locator('[data-ascii-logo]')).toBeVisible();
-  await expect(page.locator('[data-drip-canvas]')).toHaveCSS('display', 'none');
+  await expect(page.locator('[data-ascii-output]')).toContainText('___ ____');
+  await expect(page.getByText('LIFESTEAL // HOME')).toBeVisible();
+  await expect(page.getByText('FOUNDED 2021')).toBeVisible();
+  await expect(page.getByText('INDEPENDENT AUDIO // NAARM')).toBeVisible();
+  await expect(page.locator('[data-rain-canvas]')).toHaveCSS('display', 'none');
+  await expect(page.locator('.site-footer__rule')).toHaveCount(0);
+  await expect(page.getByText('EOF', { exact: true })).toHaveCount(0);
+});
+
+test('landing types for five seconds, then exposes a silent colour terminal', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The colour terminal is intentionally desktop-only.');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(siteUrl('/'));
+  const logo = page.locator('[data-ascii-logo]');
+  const terminal = page.locator('[data-terminal-input]');
+  await page.waitForTimeout(900);
+  await expect(logo).toHaveAttribute('data-typing', 'true');
+  await expect(terminal).not.toBeVisible();
+  await expect(logo).toHaveAttribute('data-typing', 'false', { timeout: 6_000 });
+  await expect(terminal).toBeVisible();
+
+  for (const [command, mode] of [
+    ['RED', 'red'],
+    ['GAY', 'gay'],
+    ['LESBIAN', 'lesbian'],
+    ['PANSEXUAL', 'pansexual'],
+    ['BISEXUAL', 'bisexual'],
+    ['TRANSGENDER', 'transgender'],
+    ['INTERSEX', 'intersex'],
+    ['LGBT', 'rainbow'],
+    ['INDIGENOUS', 'aboriginal'],
+  ]) {
+    await terminal.fill(command);
+    await terminal.press('Enter');
+    await expect(page.locator('[data-ascii-stage]')).toHaveAttribute('data-colour-mode', mode);
+    await expect(terminal).toHaveValue('');
+  }
+});
+
+test('header prism plays only when the wordmark is hovered', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(siteUrl('/about/'));
+  const wordmark = page.locator('.wordmark');
+  const animationName = () =>
+    wordmark.evaluate((element) => getComputedStyle(element, '::after').animationName);
+  const prismOpacity = () =>
+    wordmark.evaluate((element) => getComputedStyle(element, '::after').opacity);
+
+  expect(await animationName()).toBe('none');
+  await expect(wordmark).toHaveCSS('text-shadow', 'none');
+  expect(await prismOpacity()).toBe('0');
+  await wordmark.hover();
+  expect(await animationName()).toBe('wordmark-prism');
+  expect(await prismOpacity()).toBe('1');
+  await page.mouse.move(900, 500);
+  expect(await animationName()).toBe('none');
+  expect(await prismOpacity()).toBe('0');
+  await wordmark.hover();
+  expect(await animationName()).toBe('wordmark-prism');
+});
+
+test('terminal text aligns with its prompt and persisted flag themes clip through the logo', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The command terminal is intentionally desktop-only.');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(siteUrl('/'));
+  const terminal = page.locator('[data-terminal-input]');
+  await terminal.fill('TRANS');
+  const geometry = await page.evaluate(() => {
+    const prompt = document.querySelector('.ascii-terminal__prompt')?.getBoundingClientRect();
+    const value = document.querySelector('.ascii-terminal__value')?.getBoundingClientRect();
+    return { promptTop: prompt?.top ?? 0, valueTop: value?.top ?? 0 };
+  });
+  expect(Math.abs(geometry.promptTop - geometry.valueTop)).toBeLessThanOrEqual(1);
+  await terminal.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'transgender');
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-ascii-output]')
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    )
+    .toContain('rgb(91, 206, 250)');
+
+  await terminal.fill('ABORIGINAL');
+  await terminal.press('Enter');
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-ascii-output]')
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    )
+    .toContain('rgb(255, 207, 0)');
+
+  await page.goto(siteUrl('/about/'));
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'aboriginal');
+  const accent = await page
+    .locator('html')
+    .evaluate((element) => getComputedStyle(element).getPropertyValue('--accent').trim());
+  expect(accent).toBe('#dd0000');
+});
+
+test('home navigation shows the newsletter gate only once per site visit', async ({
+  page,
+  isMobile,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(siteUrl('/'));
+  if (isMobile) {
+    await page.locator(`nav a[href="${siteUrl('/artists/')}"]`).click();
+  } else {
+    const terminal = page.locator('[data-terminal-input]');
+    await terminal.fill('artists');
+    await terminal.press('Enter');
+  }
+  await expect(page.getByRole('dialog', { name: 'intercept the signal.' })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`${sitePath}/?$`));
+  await page.getByRole('button', { name: 'CONTINUE WITHOUT SIGNING UP' }).click();
+  await expect(page).toHaveURL(/\/artists\/(?:#.*)?$/);
+
+  await page.goto(siteUrl('/'));
+  await page.locator(`nav a[href="${siteUrl('/releases/')}"]`).click();
+  await expect(page).toHaveURL(/\/releases\/(?:#.*)?$/);
+  await expect(page.locator('[data-newsletter-gate]')).not.toBeVisible();
+});
+
+test('newsletter signup posts an identifiable home-gate record before continuing', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  let submitted: Record<string, string> = {};
+  await page.route('https://newsletter.lifesteal.world/subscribe', async (route) => {
+    submitted = route.request().postDataJSON() as Record<string, string>;
+    await route.fulfill({ status: 201, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.goto(siteUrl('/'));
+  await page.locator(`nav a[href="${siteUrl('/radio/')}"]`).click();
+  await page.getByLabel('EMAIL ADDRESS').fill('listener@example.com');
+  await page.getByRole('button', { name: 'JOIN SIGNAL' }).click();
+  await expect(page.getByText('SIGNAL RECEIVED // SUBSCRIBED')).toBeVisible();
+  expect(submitted).toMatchObject({
+    email: 'listener@example.com',
+    source: 'homepage_gate',
+  });
+  await expect(page).toHaveURL(/\/radio\/$/);
 });
 
 test('artist browser is keyboard-operable and deep-linkable', async ({ page }) => {
   await page.goto(siteUrl('/artists/#hazelmere'));
   await expect(page.getByRole('heading', { name: 'HAZELMERE' })).toBeVisible();
-  await page.getByRole('button', { name: 'Next artist' }).click();
+  await page.getByRole('button', { name: 'Show starstrike' }).click();
   await expect(page.getByRole('heading', { name: 'starstrike' })).toBeVisible();
   await expect(page).toHaveURL(/#starstrike$/);
-  await page.locator('[data-artist-browser]').press('ArrowLeft');
+  await page.locator('[data-gallery]').press('ArrowLeft');
   await expect(page.getByRole('heading', { name: 'HAZELMERE' })).toBeVisible();
+  await expect(page.locator('[data-gallery-position]')).toHaveText('01 / 02');
 });
 
 test('release and store records are canonical and intentionally pending', async ({ page }) => {
@@ -56,8 +209,39 @@ test('release and store records are canonical and intentionally pending', async 
     .locator('[data-release-id]')
     .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-release-id')));
   expect(new Set(releaseIds).size).toBe(releaseIds.length);
+  await expect(page.getByText('02 OCT 2026')).toBeVisible();
+  await page.getByRole('button', { name: 'Show AUDIOCLUB' }).click();
+  await expect(page.getByText('25 SEPT 2026')).toBeVisible();
+  await expect(page.locator('[data-gallery-position]')).toHaveText('02 / 02');
   await page.goto(siteUrl('/store/'));
+  await expect(page.locator('.page-heading')).toHaveCount(0);
   await expect(page.getByText('PRE-SAVE LINK INITIALISING')).toHaveCount(2);
+});
+
+test('desktop routes keep the complete shell inside one viewport', async ({ page }) => {
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const route of routes) {
+      await page.goto(siteUrl(route));
+      await page.waitForLoadState('networkidle');
+      const dimensions = await page.evaluate(() => ({
+        clientHeight: document.documentElement.clientHeight,
+        scrollHeight: document.documentElement.scrollHeight,
+        footerBottom: document.querySelector('footer')?.getBoundingClientRect().bottom ?? 0,
+      }));
+      expect(
+        dimensions.scrollHeight,
+        `${route} should not scroll at ${viewport.width}×${viewport.height}`,
+      ).toBeLessThanOrEqual(dimensions.clientHeight + 1);
+      expect(
+        dimensions.footerBottom,
+        `${route} footer should remain visible at ${viewport.width}×${viewport.height}`,
+      ).toBeLessThanOrEqual(dimensions.clientHeight + 1);
+    }
+  }
 });
 
 test('radio has an explicit safe offline state', async ({ page }) => {

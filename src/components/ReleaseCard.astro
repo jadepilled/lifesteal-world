@@ -138,7 +138,8 @@ const paletteStyle = [
 <style>
   .release-card {
     display: grid;
-    grid-template-columns: minmax(300px, 0.86fr) minmax(400px, 1.14fr);
+    min-height: 0;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(390px, 1.1fr);
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--release-accent), transparent 60%);
     background:
@@ -154,20 +155,24 @@ const paletteStyle = [
 
   .release-card__artwork-shell {
     display: grid;
-    min-height: 100%;
+    min-width: 0;
+    min-height: 0;
     border-right: 1px solid color-mix(in srgb, var(--release-accent), transparent 66%);
     background: var(--release-surface);
     place-items: center;
   }
 
   .release-card__artwork-shell a {
-    display: block;
+    display: grid;
     width: 100%;
+    height: 100%;
+    place-items: center;
   }
 
   .release-card__artwork {
     width: 100%;
-    height: auto;
+    height: 100%;
+    max-height: 100%;
     aspect-ratio: 1;
     object-fit: contain;
   }
@@ -175,7 +180,7 @@ const paletteStyle = [
   .release-card__copy {
     display: flex;
     min-width: 0;
-    padding: clamp(34px, 5.2vw, 78px);
+    padding: clamp(23px, 4.1vh, 54px) clamp(28px, 4.2vw, 66px);
     flex-direction: column;
     justify-content: center;
   }
@@ -194,16 +199,16 @@ const paletteStyle = [
   }
 
   .release-card__artist {
-    margin: 44px 0 3px;
+    margin: clamp(17px, 2.4vh, 30px) 0 3px;
     color: var(--release-accent);
     font-size: 12px;
     letter-spacing: 0.12em;
   }
 
   .release-card h2 {
-    margin: 0 0 30px;
+    margin: 0 0 clamp(15px, 2.1vh, 25px);
     font-family: var(--display);
-    font-size: clamp(60px, 8.4vw, 124px);
+    font-size: clamp(54px, 8.4vh, 100px);
     font-weight: 900;
     line-height: 0.78;
     letter-spacing: -0.055em;
@@ -213,7 +218,7 @@ const paletteStyle = [
   .release-card__meta {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    margin: 0 0 28px;
+    margin: 0 0 clamp(13px, 1.8vh, 22px);
     border-top: 1px solid color-mix(in srgb, var(--release-accent), transparent 72%);
     border-bottom: 1px solid color-mix(in srgb, var(--release-accent), transparent 72%);
   }
@@ -234,14 +239,17 @@ const paletteStyle = [
 
   .release-card__biography {
     max-width: 680px;
+    margin-bottom: 0;
     color: color-mix(in srgb, var(--release-fg), transparent 22%);
+    font-size: clamp(11px, 1.35vh, 14px);
+    line-height: 1.55;
   }
 
   .release-card__metrics,
   .release-card__links {
     display: flex;
     padding: 0;
-    margin: 20px 0 0;
+    margin: clamp(10px, 1.8vh, 18px) 0 0;
     flex-wrap: wrap;
     gap: 10px;
     list-style: none;
@@ -278,7 +286,7 @@ const paletteStyle = [
   }
 
   .release-card__attribution {
-    margin: 20px 0 0;
+    margin: clamp(9px, 1.4vh, 15px) 0 0;
     color: color-mix(in srgb, var(--release-fg), transparent 52%);
     font-size: 9px;
   }
@@ -289,8 +297,13 @@ const paletteStyle = [
     }
 
     .release-card__artwork-shell {
+      min-height: auto;
       border-right: 0;
       border-bottom: 1px solid color-mix(in srgb, var(--release-accent), transparent 66%);
+    }
+
+    .release-card__artwork {
+      height: auto;
     }
   }
 

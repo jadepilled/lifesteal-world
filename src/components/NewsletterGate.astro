@@ -1,0 +1,318 @@
+---
+const endpoint =
+  import.meta.env.PUBLIC_NEWSLETTER_ENDPOINT ?? 'https://newsletter.lifesteal.world/subscribe';
+---
+
+<dialog class="newsletter-gate" data-newsletter-gate aria-labelledby="newsletter-gate-title">
+  <form class="newsletter-gate__panel" data-newsletter-form data-endpoint={endpoint}>
+    <div class="newsletter-gate__status" aria-hidden="true">
+      <span>INTERRUPT // MAILING LIST</span>
+      <span>OPTIONAL</span>
+    </div>
+    <button
+      class="newsletter-gate__close"
+      type="button"
+      data-newsletter-dismiss
+      aria-label="Dismiss newsletter signup">×</button
+    >
+    <p class="newsletter-gate__eyebrow">ONE TRANSMISSION PER ERA</p>
+    <h2 id="newsletter-gate-title">intercept the signal.</h2>
+    <p class="newsletter-gate__copy">
+      New releases, broadcasts and label transmissions. Sparse by design; leave whenever you want.
+    </p>
+    <label class="newsletter-gate__label" for="newsletter-email">EMAIL ADDRESS</label>
+    <div class="newsletter-gate__field">
+      <span aria-hidden="true">&gt;</span>
+      <input
+        id="newsletter-email"
+        data-newsletter-email
+        type="email"
+        name="email"
+        inputmode="email"
+        autocomplete="email"
+        placeholder="name@domain.tld"
+        required
+      />
+    </div>
+    <label class="newsletter-gate__honeypot" aria-hidden="true">
+      Company
+      <input name="company" type="text" tabindex="-1" autocomplete="off" />
+    </label>
+    <div class="newsletter-gate__actions">
+      <button class="terminal-button newsletter-gate__submit" type="submit">JOIN SIGNAL</button>
+      <button class="newsletter-gate__skip" type="button" data-newsletter-dismiss>
+        CONTINUE WITHOUT SIGNING UP
+      </button>
+    </div>
+    <p class="newsletter-gate__response" data-newsletter-response aria-live="polite"></p>
+  </form>
+</dialog>
+
+<script>
+  const gate = document.querySelector<HTMLDialogElement>('[data-newsletter-gate]');
+  const form = gate?.querySelector<HTMLFormElement>('[data-newsletter-form]');
+  const email = gate?.querySelector<HTMLInputElement>('[data-newsletter-email]');
+  const response = gate?.querySelector<HTMLElement>('[data-newsletter-response]');
+  const seenKey = 'lifesteal.newsletterGateSeen';
+  let pendingHref = '';
+  let navigating = false;
+
+  const markSeen = () => {
+    try {
+      sessionStorage.setItem(seenKey, 'true');
+    } catch {
+      // The gate still works when session storage is unavailable.
+    }
+  };
+
+  const hasBeenSeen = () => {
+    try {
+      return sessionStorage.getItem(seenKey) === 'true';
+    } catch {
+      return false;
+    }
+  };
+
+  const continueToTarget = () => {
+    if (navigating || !pendingHref) return;
+    navigating = true;
+    window.location.assign(pendingHref);
+  };
+
+  const openGate = (href: string) => {
+    if (!gate) {
+      window.location.assign(href);
+      return;
+    }
+    pendingHref = href;
+    markSeen();
+    gate.showModal();
+    window.setTimeout(() => email?.focus(), 80);
+  };
+
+  const requestNavigation = (href: string) => {
+    if (document.body.dataset.page !== 'home' || hasBeenSeen()) {
+      window.location.assign(href);
+      return;
+    }
+    openGate(href);
+  };
+
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (document.body.dataset.page !== 'home' || hasBeenSeen()) return;
+      const target =
+        event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+      if (!target || target.target === '_blank' || target.hasAttribute('download')) return;
+      const destination = new URL(target.href, window.location.href);
+      if (
+        destination.origin !== window.location.origin ||
+        destination.pathname === window.location.pathname
+      ) {
+        return;
+      }
+      event.preventDefault();
+      openGate(destination.href);
+    },
+    { capture: true },
+  );
+
+  window.addEventListener('lifesteal:navigate', (event) => {
+    const href = (event as CustomEvent<{ href?: string }>).detail?.href;
+    if (href) requestNavigation(new URL(href, window.location.href).href);
+  });
+
+  gate?.querySelectorAll<HTMLElement>('[data-newsletter-dismiss]').forEach((button) => {
+    button.addEventListener('click', () => gate.close('dismissed'));
+  });
+  gate?.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    gate.close('dismissed');
+  });
+  gate?.addEventListener('close', continueToTarget);
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!email || !response) return;
+    const submit = form.querySelector<HTMLButtonElement>('[type="submit"]');
+    const honeypot = form.elements.namedItem('company');
+    const company = honeypot instanceof HTMLInputElement ? honeypot.value : '';
+    const endpoint = form.dataset.endpoint;
+    response.textContent = 'TRANSMITTING…';
+    if (submit) submit.disabled = true;
+
+    try {
+      const result = await fetch(endpoint ?? '', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.value,
+          company,
+          source: 'homepage_gate',
+          page: window.location.href,
+        }),
+      });
+      if (!result.ok) throw new Error('Signup failed');
+      response.textContent = 'SIGNAL RECEIVED // SUBSCRIBED';
+      window.setTimeout(() => gate?.close('subscribed'), 650);
+    } catch {
+      response.textContent = 'SIGNAL FAILED // TRY AGAIN OR CONTINUE';
+      if (submit) submit.disabled = false;
+    }
+  });
+</script>
+
+<style>
+  .newsletter-gate {
+    width: min(620px, calc(100vw - 30px));
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    background: #020202;
+    color: var(--white);
+    box-shadow:
+      0 0 0 1px #000,
+      0 0 50px color-mix(in srgb, var(--accent) 26%, transparent);
+  }
+
+  .newsletter-gate::backdrop {
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(7px);
+  }
+
+  .newsletter-gate__panel {
+    position: relative;
+    padding: clamp(24px, 5vw, 48px);
+    background:
+      linear-gradient(90deg, transparent 49.8%, rgba(255, 255, 255, 0.04) 50%, transparent 50.2%),
+      radial-gradient(
+        circle at 20% 0%,
+        color-mix(in srgb, var(--accent) 14%, transparent),
+        transparent 42%
+      );
+  }
+
+  .newsletter-gate__status {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: clamp(34px, 6vw, 58px);
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 0.11em;
+  }
+
+  .newsletter-gate__close {
+    position: absolute;
+    top: 28px;
+    right: 28px;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 24px;
+    cursor: pointer;
+    place-items: center;
+  }
+
+  .newsletter-gate__eyebrow,
+  .newsletter-gate__label {
+    color: var(--accent);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+
+  .newsletter-gate h2 {
+    margin: 5px 0 18px;
+    font-family: var(--display);
+    font-size: clamp(48px, 9vw, 82px);
+    font-weight: 900;
+    line-height: 0.82;
+    letter-spacing: -0.055em;
+  }
+
+  .newsletter-gate__copy {
+    max-width: 52ch;
+    margin-bottom: 28px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .newsletter-gate__label {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .newsletter-gate__field {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--line-strong);
+    background: #000;
+    color: var(--accent);
+    gap: 10px;
+  }
+
+  .newsletter-gate__field input {
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--white);
+  }
+
+  .newsletter-gate__honeypot {
+    position: absolute;
+    left: -10000px;
+  }
+
+  .newsletter-gate__actions {
+    display: flex;
+    align-items: center;
+    margin-top: 18px;
+    gap: 18px;
+  }
+
+  .newsletter-gate__skip {
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10px;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+
+  .newsletter-gate__response {
+    min-height: 1.5em;
+    margin: 13px 0 0;
+    color: var(--accent);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 540px) {
+    .newsletter-gate__panel {
+      padding: 22px;
+    }
+
+    .newsletter-gate__status span:last-child {
+      display: none;
+    }
+
+    .newsletter-gate__close {
+      top: 16px;
+      right: 16px;
+    }
+
+    .newsletter-gate__actions {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 7px;
+    }
+  }
+</style>

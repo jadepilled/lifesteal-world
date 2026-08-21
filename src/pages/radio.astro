@@ -19,12 +19,7 @@ const initialTrack = radioTracks[0];
   image={initialTrack?.artwork.src}
   page="radio"
 >
-  <PageHeading
-    route="RADIO"
-    title="radio"
-    intro="One programme, one source, one point in time. When the transmission is active, every listener joins the same live signal rather than starting a private playlist."
-    status={stationEnabled ? 'LIVE' : 'OFFLINE'}
-  />
+  <PageHeading title="radio" status={stationEnabled ? 'LIVE' : 'OFFLINE'} />
 
   <section
     class:list={['radio-console', 'panel', { 'radio-console--offline': !stationEnabled }]}
@@ -261,13 +256,15 @@ const initialTrack = radioTracks[0];
 <style>
   .radio-console {
     display: grid;
+    min-height: 0;
     grid-template-columns: minmax(320px, 0.88fr) minmax(400px, 1.12fr);
     overflow: hidden;
+    flex: 1;
   }
 
   .radio-console__art-shell {
     position: relative;
-    min-height: 560px;
+    min-height: 0;
     overflow: hidden;
     border-right: 1px solid var(--line);
     background: #080508;
@@ -311,7 +308,7 @@ const initialTrack = radioTracks[0];
   .radio-console__readout {
     display: flex;
     min-width: 0;
-    padding: clamp(32px, 5.5vw, 82px);
+    padding: clamp(22px, 3.8vh, 48px) clamp(28px, 4.2vw, 64px);
     flex-direction: column;
     justify-content: center;
   }
@@ -341,7 +338,7 @@ const initialTrack = radioTracks[0];
   }
 
   .radio-console__metadata {
-    padding: clamp(42px, 7vw, 90px) 0 34px;
+    padding: clamp(20px, 3.4vh, 42px) 0 clamp(15px, 2.3vh, 28px);
   }
 
   .radio-console__artist {
@@ -354,7 +351,7 @@ const initialTrack = radioTracks[0];
   .radio-console h2 {
     margin: 2px 0 21px;
     font-family: var(--display);
-    font-size: clamp(68px, 9vw, 142px);
+    font-size: clamp(58px, 8vh, 96px);
     font-weight: 900;
     line-height: 0.76;
     letter-spacing: -0.055em;
@@ -387,7 +384,7 @@ const initialTrack = radioTracks[0];
   .radio-console__controls {
     display: grid;
     grid-template-columns: 1fr minmax(150px, 0.55fr);
-    margin-top: 32px;
+    margin-top: clamp(14px, 2vh, 24px);
     gap: 14px;
   }
 
@@ -430,7 +427,7 @@ const initialTrack = radioTracks[0];
   }
 
   .radio-console__notice {
-    margin: 24px 0 0;
+    margin: clamp(10px, 1.5vh, 18px) 0 0;
     color: var(--muted);
     font-size: 10px;
   }
@@ -442,8 +439,8 @@ const initialTrack = radioTracks[0];
   .radio-manifest {
     display: grid;
     grid-template-columns: 190px 1fr;
-    padding: 26px 0;
-    margin-top: 48px;
+    padding: 8px 0;
+    margin-top: clamp(8px, 1.2vh, 14px);
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
   }
@@ -487,6 +484,7 @@ const initialTrack = radioTracks[0];
   @media (max-width: 900px) {
     .radio-console {
       grid-template-columns: 1fr;
+      flex: none;
     }
 
     .radio-console__art-shell {

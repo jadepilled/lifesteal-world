@@ -3,6 +3,17 @@ import PageHeading from '../components/PageHeading.astro';
 import ReleaseCard from '../components/ReleaseCard.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { releases } from '../lib/content';
+
+const initialPalette = releases[0]?.palette;
+const galleryStyle = initialPalette
+  ? [
+      `--gallery-background:${initialPalette.background}`,
+      `--gallery-surface:${initialPalette.surface}`,
+      `--gallery-foreground:${initialPalette.foreground}`,
+      `--gallery-accent:${initialPalette.accent}`,
+      `--gallery-glow:${initialPalette.glow}`,
+    ].join(';')
+  : undefined;
 ---
 
 <BaseLayout
@@ -10,21 +21,189 @@ import { releases } from '../lib/content';
   description="Releases and forthcoming transmissions from LIFESTEAL artists."
   page="releases"
 >
-  <PageHeading
-    route="RELEASES"
-    title="releases"
-    intro="Canonical recordings assembled across platforms. Artwork defines the local signal; metrics are shown only where the platform exposes them honestly."
-    status={`${releases.length.toString().padStart(2, '0')} LOADED`}
-  />
+  <PageHeading title="releases" status={`${releases.length.toString().padStart(2, '0')} LOADED`} />
 
-  <div class="release-index">
-    {releases.map((release, index) => <ReleaseCard release={release} index={index} />)}
-  </div>
+  <section
+    class="snap-gallery release-gallery panel"
+    data-gallery
+    aria-label="LIFESTEAL releases"
+    tabindex="0"
+    style={galleryStyle}
+  >
+    <div class="snap-gallery__viewport" data-gallery-viewport tabindex="0">
+      {
+        releases.map((release, index) => (
+          <div
+            class="release-slide"
+            id={release.canonicalId}
+            data-gallery-slide
+            data-gallery-id={release.canonicalId}
+            data-gallery-background={release.palette.background}
+            data-gallery-surface={release.palette.surface}
+            data-gallery-foreground={release.palette.foreground}
+            data-gallery-accent={release.palette.accent}
+            data-gallery-glow={release.palette.glow}
+            aria-label={`${index + 1} of ${releases.length}: ${release.title}`}
+          >
+            <ReleaseCard release={release} index={index} />
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="snap-gallery__controls">
+      <div class="snap-gallery__markers" aria-label="Select release">
+        {
+          releases.map((release, index) => (
+            <button
+              type="button"
+              data-gallery-marker
+              aria-label={`Show ${release.title}`}
+              aria-current={index === 0 ? 'true' : undefined}
+              tabindex={index === 0 ? 0 : -1}
+            >
+              <span>{String(index + 1).padStart(2, '0')}</span>
+            </button>
+          ))
+        }
+      </div>
+      <span class="snap-gallery__hint">SCROLL / SWIPE / ARROW KEYS</span>
+      <output data-gallery-position aria-live="polite">
+        01 / {String(releases.length).padStart(2, '0')}
+      </output>
+    </div>
+  </section>
 </BaseLayout>
 
+<script>
+  import { setupSnapGallery } from '../lib/snap-gallery';
+
+  document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
+</script>
+
 <style>
-  .release-index {
+  .release-gallery {
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+    flex: 1;
+    flex-direction: column;
+    border-color: color-mix(in srgb, var(--gallery-accent), transparent 58%);
+    background: var(--gallery-background);
+    box-shadow: 0 0 45px color-mix(in srgb, var(--gallery-glow), transparent 94%);
+    transition:
+      background-color 180ms linear,
+      border-color 180ms linear,
+      box-shadow 180ms linear;
+  }
+
+  .snap-gallery__viewport {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex: 1;
+    scrollbar-color: var(--gallery-accent) color-mix(in srgb, var(--gallery-surface), #000 50%);
+    scrollbar-width: thin;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+  }
+
+  .snap-gallery__viewport::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .snap-gallery__viewport::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--gallery-surface), #000 50%);
+  }
+
+  .snap-gallery__viewport::-webkit-scrollbar-thumb {
+    border: 2px solid color-mix(in srgb, var(--gallery-surface), #000 50%);
+    background: var(--gallery-accent);
+  }
+
+  .release-slide {
+    min-width: 100%;
+    min-height: 0;
+    overflow: hidden;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .release-slide :global(.release-card) {
+    height: 100%;
+    border: 0;
+  }
+
+  .snap-gallery__controls {
     display: grid;
-    gap: clamp(48px, 8vw, 120px);
+    min-height: 44px;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    padding: 0 14px;
+    border-top: 1px solid color-mix(in srgb, var(--gallery-accent), transparent 65%);
+    background: color-mix(in srgb, var(--gallery-surface), #000 36%);
+    color: color-mix(in srgb, var(--gallery-foreground), transparent 48%);
+    font-size: 9px;
+    letter-spacing: 0.09em;
+    gap: 18px;
+  }
+
+  .snap-gallery__markers {
+    display: flex;
+    align-items: stretch;
+    align-self: stretch;
+  }
+
+  .snap-gallery__markers button {
+    min-width: 42px;
+    border: 0;
+    border-right: 1px solid color-mix(in srgb, var(--gallery-accent), transparent 78%);
+    background: transparent;
+    color: inherit;
+    font-size: 9px;
+    cursor: pointer;
+  }
+
+  .snap-gallery__markers button[aria-current='true'] {
+    background: color-mix(in srgb, var(--gallery-accent), transparent 85%);
+    color: var(--gallery-foreground);
+    text-shadow: 0 0 8px var(--gallery-glow);
+  }
+
+  .snap-gallery__controls output {
+    color: var(--gallery-accent);
+    text-shadow: 0 0 8px color-mix(in srgb, var(--gallery-glow), transparent 35%);
+  }
+
+  @media (max-width: 900px) {
+    .release-gallery {
+      min-height: min(820px, calc(100svh - 190px));
+      flex: none;
+    }
+
+    .release-slide {
+      overflow-y: auto;
+    }
+
+    .release-slide :global(.release-card) {
+      height: auto;
+      min-height: 100%;
+    }
+
+    .snap-gallery__hint {
+      display: none;
+    }
+
+    .snap-gallery__controls {
+      grid-template-columns: 1fr auto;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .release-gallery {
+      min-height: 760px;
+    }
   }
 </style>
