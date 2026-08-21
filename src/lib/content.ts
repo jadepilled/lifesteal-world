@@ -15,9 +15,9 @@ export const releases = generatedReleasesSchema
   .filter((release) => release.status !== 'archived')
   .sort((left, right) => {
     if (!left.releaseDate && !right.releaseDate) return left.title.localeCompare(right.title);
-    if (!left.releaseDate) return -1;
-    if (!right.releaseDate) return 1;
-    return left.releaseDate.localeCompare(right.releaseDate);
+    if (!left.releaseDate) return 1;
+    if (!right.releaseDate) return -1;
+    return right.releaseDate.localeCompare(left.releaseDate);
   });
 export const presaves = presavesSchema.parse(presaveData);
 export const radioTracks = radioTracksSchema

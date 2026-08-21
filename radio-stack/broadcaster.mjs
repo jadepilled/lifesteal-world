@@ -26,9 +26,19 @@ const writeNowPlaying = async (value) => {
 const getTracks = async () => {
   const catalogue = JSON.parse(await readFile(cataloguePath, 'utf8'));
   if (!Array.isArray(catalogue)) throw new Error('Radio catalogue must be an array');
-  return catalogue
-    .filter((track) => track.enabled !== false)
-    .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+  return catalogue.filter((track) => track.enabled !== false);
+};
+
+const shuffle = (tracks, previousId) => {
+  const queue = [...tracks];
+  for (let index = queue.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [queue[index], queue[swap]] = [queue[swap], queue[index]];
+  }
+  if (queue.length > 1 && queue[0]?.id === previousId) {
+    [queue[0], queue[1]] = [queue[1], queue[0]];
+  }
+  return queue;
 };
 
 const streamTrack = async (track) => {
@@ -39,6 +49,7 @@ const streamTrack = async (track) => {
     id: track.id,
     artist: track.artist,
     title: track.title,
+    titleAscii: track.asciiTitle,
     album: track.album,
     year: track.year,
     label: track.label,
@@ -87,17 +98,18 @@ const streamTrack = async (track) => {
 };
 
 const run = async () => {
-  let cursor = 0;
+  let queue = [];
+  let previousId;
   while (!stopping) {
     try {
-      const tracks = await getTracks();
-      if (!tracks.length) {
+      if (!queue.length) queue = shuffle(await getTracks(), previousId);
+      if (!queue.length) {
         await writeNowPlaying({ status: 'offline', reason: 'NO ENABLED TRACKS' });
         await new Promise((resolve) => setTimeout(resolve, 5000));
         continue;
       }
-      const track = tracks[cursor % tracks.length];
-      cursor = (cursor + 1) % tracks.length;
+      const track = queue.shift();
+      previousId = track.id;
       await streamTrack(track);
     } catch (error) {
       console.error(error);

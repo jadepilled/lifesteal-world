@@ -122,7 +122,27 @@ const socialImage = new URL(withBase(image), Astro.site);
         });
         document.addEventListener('astro:before-swap', () => observer.disconnect(), { once: true });
       };
+      const syncPrismAnimations = () => {
+        requestAnimationFrame(() => {
+          document.getAnimations().forEach((animation) => {
+            if (typeof CSSAnimation === 'undefined' || !(animation instanceof CSSAnimation)) return;
+            if (
+              !animation.animationName.includes('prism') ||
+              animation.animationName === 'header-prism'
+            ) {
+              return;
+            }
+            try {
+              animation.startTime = 0;
+            } catch {
+              // An animation can disappear during an Astro page swap; the next page-load resyncs it.
+            }
+          });
+        });
+      };
       document.addEventListener('astro:page-load', setupTypingFill);
+      document.addEventListener('astro:page-load', syncPrismAnimations);
+      window.addEventListener('lifesteal:prism-ready', syncPrismAnimations);
     </script>
   </body>
 </html>

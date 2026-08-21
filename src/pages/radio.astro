@@ -28,24 +28,33 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     data-mp3-url={mp3Url}
     data-metadata-url={metadataUrl}
     data-state="offline"
+    data-visualizer-mode="visualizer"
     aria-label="LIFESTEAL radio player"
   >
     <div class="radio-console__art-shell">
       <canvas class="radio-console__visualizer" data-radio-visualizer aria-hidden="true"></canvas>
-      <div class="radio-console__artwork-hud">
+      <div class="radio-console__artwork-display" data-radio-display-artwork aria-hidden="true">
         <img
           src={withBase(offlineArtwork)}
-          alt="LIFESTEAL broadcast offline placeholder"
+          alt=""
           width="1080"
           height="1080"
-          data-radio-artwork
+          data-radio-display-artwork-image
         />
         <span data-radio-artwork-label>NO MEDIA LOADED</span>
       </div>
+      <button
+        class="radio-console__visualizer-toggle accent-prism-frame"
+        type="button"
+        data-radio-visualizer-toggle
+        aria-pressed="true"
+      >
+        VISUALIZER / ON
+      </button>
       <dl class="radio-console__telemetry" aria-label="Broadcast connection statistics">
-        <div><dt>LINK</dt><dd data-radio-transport>STANDBY</dd></div>
-        <div><dt>FORMAT</dt><dd data-radio-format>MP3 / 128K</dd></div>
-        <div><dt>NETWORK</dt><dd data-radio-network>CHECKING</dd></div>
+        <div><dt>PING</dt><dd data-radio-ping>— MS</dd></div>
+        <div><dt>DOWN</dt><dd data-radio-downlink>CHECKING</dd></div>
+        <div><dt>BUFFER</dt><dd data-radio-buffer>STANDBY</dd></div>
       </dl>
       <div class="radio-console__signal" aria-hidden="true">
         {
@@ -64,14 +73,25 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       </div>
 
       <div class="radio-console__metadata">
-        <p class="radio-console__artist" data-radio-artist>NO MEDIA LOADED</p>
-        <AsciiTitle
-          text="STREAM OFFLINE"
-          variants={['STREAM OFFLINE']}
-          accent="var(--radio-title-accent, #ff304f)"
-          id="radio-now-playing"
-        />
-        <p class="radio-console__album" data-radio-album>CHANNEL IDLE</p>
+        <div class="radio-console__info-artwork" data-radio-info-artwork>
+          <img
+            src={withBase(offlineArtwork)}
+            alt="LIFESTEAL broadcast offline placeholder"
+            width="1080"
+            height="1080"
+            data-radio-info-artwork-image
+          />
+        </div>
+        <div class="radio-console__metadata-copy">
+          <p class="radio-console__artist" data-radio-artist>NO MEDIA LOADED</p>
+          <AsciiTitle
+            text="STREAM OFFLINE"
+            variants={['STREAM OFFLINE']}
+            accent="var(--radio-title-accent, #ff304f)"
+            id="radio-now-playing"
+          />
+          <p class="radio-console__album" data-radio-album>CHANNEL IDLE</p>
+        </div>
       </div>
 
       <div class="radio-console__divider" aria-hidden="true">
@@ -101,14 +121,6 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
         </label>
       </div>
 
-      {
-        stationEnabled && (
-          <p class="radio-console__notice" data-radio-notice>
-            Playback begins only after you choose to join. The programme itself is already in
-            motion.
-          </p>
-        )
-      }
       <audio data-radio-audio preload="none" crossorigin="anonymous"></audio>
     </div>
   </section>
@@ -120,6 +132,7 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     id?: string;
     artist?: string;
     title?: string;
+    titleAscii?: string;
     album?: string;
     year?: number;
     label?: string;
@@ -135,50 +148,106 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
 
   const setupRadio = () => {
     const consoleElement = document.querySelector<HTMLElement>('[data-radio-console]');
-    if (consoleElement?.dataset.enabled !== 'true') return;
+    if (!consoleElement) return;
+    const revealUI = () =>
+      requestAnimationFrame(() => {
+        consoleElement.dataset.uiReady = 'true';
+      });
+    if (consoleElement.dataset.enabled !== 'true') {
+      revealUI();
+      return;
+    }
     const audio = consoleElement.querySelector<HTMLAudioElement>('[data-radio-audio]');
     const toggle = consoleElement.querySelector<HTMLButtonElement>('[data-radio-toggle]');
     const volume = consoleElement.querySelector<HTMLInputElement>('[data-radio-volume]');
     const state = consoleElement.querySelector<HTMLElement>('[data-radio-state]');
-    const notice = consoleElement.querySelector<HTMLElement>('[data-radio-notice]');
     const artist = consoleElement.querySelector<HTMLElement>('[data-radio-artist]');
     const album = consoleElement.querySelector<HTMLElement>('[data-radio-album]');
-    const artwork = consoleElement.querySelector<HTMLImageElement>('[data-radio-artwork]');
+    const displayArtwork = consoleElement.querySelector<HTMLImageElement>(
+      '[data-radio-display-artwork-image]',
+    );
+    const infoArtwork = consoleElement.querySelector<HTMLImageElement>(
+      '[data-radio-info-artwork-image]',
+    );
     const artworkLabel = consoleElement.querySelector<HTMLElement>('[data-radio-artwork-label]');
     const visualizerCanvas =
       consoleElement.querySelector<HTMLCanvasElement>('[data-radio-visualizer]');
-    const transport = consoleElement.querySelector<HTMLElement>('[data-radio-transport]');
-    const format = consoleElement.querySelector<HTMLElement>('[data-radio-format]');
-    const network = consoleElement.querySelector<HTMLElement>('[data-radio-network]');
+    const visualizerToggle = consoleElement.querySelector<HTMLButtonElement>(
+      '[data-radio-visualizer-toggle]',
+    );
+    const ping = consoleElement.querySelector<HTMLElement>('[data-radio-ping]');
+    const downlink = consoleElement.querySelector<HTMLElement>('[data-radio-downlink]');
+    const buffer = consoleElement.querySelector<HTMLElement>('[data-radio-buffer]');
     let hls: { destroy: () => void } | undefined;
     let visualizer:
       | {
           connectAudio: () => Promise<void>;
           destroy: () => void;
+          setActive: (active: boolean) => void;
           setPalette: (colors: string[]) => void;
         }
       | undefined;
     let metadataTimer = 0;
     let visualizerTimer = 0;
+    let telemetryTimer = 0;
     let loading = false;
+    let activeTrackKey = '';
+    let visualizerEnabled = window.matchMedia('(min-width: 901px)').matches;
+    let latestPalette = ['#ff304f', '#9127ff', '#f2a6ff'];
     const localArtworkById: Record<string, string> = {
       'hazelmere-life-is-beautiful': `${import.meta.env.BASE_URL}assets/radio/life-is-beautiful.webp`,
     };
 
-    const updateNetworkStats = () => {
+    const readableAccent = (colors: string[]) => {
+      const parsed = colors
+        .map((color) => /^#([0-9a-f]{6})$/iu.exec(color)?.[1])
+        .filter((color): color is string => Boolean(color))
+        .map((color) =>
+          [0, 2, 4].map((offset) => Number.parseInt(color.slice(offset, offset + 2), 16)),
+        );
+      if (!parsed.length) return '#f2a6ff';
+      const luminance = ([red, green, blue]: number[]) =>
+        red! * 0.2126 + green! * 0.7152 + blue! * 0.0722;
+      const selected = parsed.sort((left, right) => luminance(right) - luminance(left))[0]!;
+      const current = luminance(selected);
+      const mix = current < 164 ? Math.min(0.58, (164 - current) / (255 - current)) : 0;
+      const lifted = selected.map((channel) => Math.round(channel! + (255 - channel!) * mix));
+      return `#${lifted.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+    };
+
+    const updateConnectionStats = () => {
       const connection = (
         navigator as Navigator & {
           connection?: { downlink?: number; effectiveType?: string; rtt?: number };
         }
       ).connection;
-      if (!network) return;
-      if (!connection) {
-        network.textContent = navigator.onLine ? 'ONLINE' : 'OFFLINE';
+      if (downlink) {
+        downlink.textContent = connection?.downlink
+          ? `${connection.downlink.toFixed(1)} MBPS`
+          : navigator.onLine
+            ? 'ONLINE'
+            : 'OFFLINE';
+      }
+      if (ping && connection?.rtt && ping.textContent === '— MS') {
+        ping.textContent = `${Math.round(connection.rtt)} MS`;
+      }
+    };
+
+    const updateBufferDepth = () => {
+      if (!buffer || !audio) return;
+      if (audio.paused) {
+        buffer.textContent = consoleElement.dataset.state === 'ready' ? 'READY' : 'STANDBY';
         return;
       }
-      const downlink = connection.downlink ? ` / ${connection.downlink.toFixed(1)}M` : '';
-      const rtt = connection.rtt ? ` / ${connection.rtt}MS` : '';
-      network.textContent = `${(connection.effectiveType ?? 'ONLINE').toUpperCase()}${downlink}${rtt}`;
+      if (!audio.buffered.length || !Number.isFinite(audio.currentTime)) {
+        buffer.textContent = 'LIVE';
+        return;
+      }
+      const seconds = Math.max(
+        0,
+        audio.buffered.end(audio.buffered.length - 1) - audio.currentTime,
+      );
+      buffer.textContent = `${seconds.toFixed(1)} S`;
     };
 
     const ensureVisualizer = async () => {
@@ -192,7 +261,24 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
         return visualizer;
       const { createRadioVisualizer } = await import('../lib/radio-visualizer');
       visualizer = createRadioVisualizer(visualizerCanvas, audio);
+      visualizer?.setPalette(latestPalette);
+      visualizer?.setActive(visualizerEnabled);
       return visualizer;
+    };
+
+    const setVisualizerMode = async (enabled: boolean) => {
+      visualizerEnabled = enabled && window.matchMedia('(min-width: 901px)').matches;
+      consoleElement.dataset.visualizerMode = visualizerEnabled ? 'visualizer' : 'artwork';
+      if (visualizerToggle) {
+        visualizerToggle.setAttribute('aria-pressed', String(visualizerEnabled));
+        visualizerToggle.textContent = visualizerEnabled ? 'VISUALIZER / ON' : 'VISUALIZER / OFF';
+      }
+      if (visualizerEnabled) {
+        const instance = await ensureVisualizer();
+        instance?.setActive(true);
+      } else {
+        visualizer?.setActive(false);
+      }
     };
 
     const setState = (value: string, machineState: string) => {
@@ -205,8 +291,6 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       hls?.destroy();
       hls = undefined;
       audio.src = consoleElement.dataset.mp3Url;
-      if (transport) transport.textContent = 'MP3 / LIVE';
-      notice && (notice.textContent = 'HLS unavailable; joined through the continuous MP3 mount.');
     };
 
     const attachStream = async () => {
@@ -215,7 +299,7 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       audio.crossOrigin = 'anonymous';
       const hlsUrl = consoleElement.dataset.hlsUrl;
       try {
-        await ensureVisualizer();
+        if (visualizerEnabled) await ensureVisualizer();
         if (hlsUrl && audio.canPlayType('application/vnd.apple.mpegurl')) {
           audio.src = hlsUrl;
         } else if (hlsUrl) {
@@ -238,15 +322,12 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
         } else {
           useMp3Fallback();
         }
-        await visualizer?.connectAudio();
+        if (visualizerEnabled) await visualizer?.connectAudio();
         await audio.play();
         setState('LIVE / CONNECTED', 'playing');
         if (toggle) toggle.textContent = 'LEAVE LIVE SIGNAL';
       } catch {
         setState('CONNECTION FAILED', 'error');
-        if (notice)
-          notice.textContent =
-            'The signal could not be joined. Check the connection and try again.';
       } finally {
         loading = false;
       }
@@ -260,24 +341,57 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       hls?.destroy();
       hls = undefined;
       setState('READY TO JOIN', 'ready');
-      if (transport) transport.textContent = 'STANDBY';
       if (toggle) toggle.textContent = 'JOIN LIVE SIGNAL';
     };
 
     const refreshMetadata = async () => {
       const url = consoleElement.dataset.metadataUrl;
-      if (!url) return;
+      if (!url) {
+        revealUI();
+        return;
+      }
+      const requestStarted = performance.now();
       try {
         const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) throw new Error('Metadata unavailable');
         const metadata = (await response.json()) as NowPlaying;
+        if (ping)
+          ping.textContent = `${Math.max(1, Math.round(performance.now() - requestStarted))} MS`;
         if (metadata.status === 'offline') throw new Error('Broadcast offline');
+        const nextTrackKey = metadata.id ?? `${metadata.artist ?? ''}:${metadata.title ?? ''}`;
+        const trackChanged = nextTrackKey !== activeTrackKey;
+        const artworkUrl =
+          (metadata.id ? localArtworkById[metadata.id] : undefined) ??
+          (metadata.artwork
+            ? new URL(
+                metadata.artwork.startsWith('/') ? `/radio${metadata.artwork}` : metadata.artwork,
+                url,
+              ).toString()
+            : undefined);
+
+        if (trackChanged && artworkUrl) {
+          const pendingArtwork = new Image();
+          pendingArtwork.src = artworkUrl;
+          await Promise.race([
+            pendingArtwork.decode().catch(() => undefined),
+            new Promise((resolve) => window.setTimeout(resolve, 900)),
+          ]);
+        }
+        if (activeTrackKey && trackChanged) {
+          consoleElement.classList.add('radio-console--track-changing');
+          await new Promise((resolve) => window.setTimeout(resolve, 170));
+        }
+
         consoleElement.classList.remove('radio-console--offline');
         if (consoleElement.dataset.state === 'offline') setState('READY TO JOIN', 'ready');
-        if (metadata.title) {
+        if (trackChanged && metadata.title) {
           window.dispatchEvent(
             new CustomEvent('lifesteal:ascii-title', {
-              detail: { id: 'radio-now-playing', text: metadata.title },
+              detail: {
+                id: 'radio-now-playing',
+                text: metadata.title,
+                ascii: metadata.titleAscii,
+              },
             }),
           );
         }
@@ -287,29 +401,22 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
             .filter(Boolean)
             .join(' / ');
         }
-        const artworkUrl =
-          (metadata.id ? localArtworkById[metadata.id] : undefined) ??
-          (metadata.artwork
-            ? new URL(
-                metadata.artwork.startsWith('/') ? `/radio${metadata.artwork}` : metadata.artwork,
-                url,
-              ).toString()
-            : undefined);
-        if (artwork && artworkUrl) {
-          artwork.src = artworkUrl;
-          artwork.alt = `${metadata.artist ?? 'LIFESTEAL'} — ${metadata.title ?? 'now playing'} artwork`;
+        if (displayArtwork && artworkUrl) {
+          displayArtwork.src = artworkUrl;
+        }
+        if (infoArtwork && artworkUrl) {
+          infoArtwork.src = artworkUrl;
+          infoArtwork.alt = `${metadata.artist ?? 'LIFESTEAL'} — ${metadata.title ?? 'now playing'} artwork`;
         }
         if (artworkLabel) artworkLabel.textContent = metadata.title ?? 'LIVE SIGNAL';
         if (metadata.palette?.length) {
-          consoleElement.style.setProperty('--radio-title-accent', metadata.palette[0]!);
-          (await ensureVisualizer())?.setPalette(metadata.palette);
-        }
-        if (format && metadata.broadcast) {
-          const codec = (metadata.broadcast.codec ?? 'MP3').toUpperCase();
-          const bitrate = metadata.broadcast.bitrateKbps
-            ? ` / ${metadata.broadcast.bitrateKbps}K`
-            : '';
-          format.textContent = `${codec}${bitrate}`;
+          consoleElement.style.setProperty(
+            '--radio-title-accent',
+            readableAccent(metadata.palette),
+          );
+          latestPalette = metadata.palette;
+          if (visualizerEnabled) (await ensureVisualizer())?.setPalette(metadata.palette);
+          else visualizer?.setPalette(metadata.palette);
         }
         if ('mediaSession' in navigator && metadata.title) {
           navigator.mediaSession.metadata = new MediaMetadata({
@@ -319,11 +426,20 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
             artwork: artworkUrl ? [{ src: artworkUrl }] : [],
           });
         }
+        activeTrackKey = nextTrackKey;
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() =>
+            consoleElement.classList.remove('radio-console--track-changing'),
+          ),
+        );
+        revealUI();
       } catch {
+        consoleElement.classList.remove('radio-console--track-changing');
         if (audio?.paused) {
           consoleElement.classList.add('radio-console--offline');
           setState('SIGNAL OFFLINE', 'offline');
         }
+        revealUI();
       }
     };
 
@@ -331,25 +447,36 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       if (audio?.paused) attachStream();
       else stopStream();
     });
+    visualizerToggle?.addEventListener('click', () => {
+      void setVisualizerMode(!visualizerEnabled);
+    });
     volume?.addEventListener('input', () => {
       if (audio) audio.volume = Number(volume.value);
     });
     if (audio && volume) audio.volume = Number(volume.value);
-    updateNetworkStats();
-    window.addEventListener('online', updateNetworkStats);
-    window.addEventListener('offline', updateNetworkStats);
-    visualizerTimer = window.setTimeout(() => void ensureVisualizer(), 650);
+    updateConnectionStats();
+    updateBufferDepth();
+    window.addEventListener('online', updateConnectionStats);
+    window.addEventListener('offline', updateConnectionStats);
+    const connection = (navigator as Navigator & { connection?: EventTarget }).connection;
+    connection?.addEventListener('change', updateConnectionStats);
+    visualizerTimer = window.setTimeout(() => {
+      if (visualizerEnabled) void ensureVisualizer();
+    }, 750);
     refreshMetadata();
     metadataTimer = window.setInterval(refreshMetadata, 10_000);
+    telemetryTimer = window.setInterval(updateBufferDepth, 1_000);
     document.addEventListener(
       'astro:before-swap',
       () => {
         window.clearInterval(metadataTimer);
+        window.clearInterval(telemetryTimer);
         window.clearTimeout(visualizerTimer);
         hls?.destroy();
         visualizer?.destroy();
-        window.removeEventListener('online', updateNetworkStats);
-        window.removeEventListener('offline', updateNetworkStats);
+        window.removeEventListener('online', updateConnectionStats);
+        window.removeEventListener('offline', updateConnectionStats);
+        connection?.removeEventListener('change', updateConnectionStats);
       },
       { once: true },
     );
@@ -367,6 +494,32 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     flex: 1;
   }
 
+  .radio-console__art-shell,
+  .radio-console__readout > * {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .radio-console[data-ui-ready='true'] .radio-console__art-shell {
+    animation: radio-surface-reveal 680ms cubic-bezier(0.2, 0.72, 0.22, 1) both;
+  }
+
+  .radio-console[data-ui-ready='true'] .radio-console__readout > * {
+    animation: radio-detail-reveal 520ms cubic-bezier(0.2, 0.72, 0.22, 1) both;
+  }
+
+  .radio-console[data-ui-ready='true'] .radio-console__readout > :nth-child(2) {
+    animation-delay: 90ms;
+  }
+
+  .radio-console[data-ui-ready='true'] .radio-console__readout > :nth-child(3) {
+    animation-delay: 150ms;
+  }
+
+  .radio-console[data-ui-ready='true'] .radio-console__readout > :nth-child(4) {
+    animation-delay: 210ms;
+  }
+
   .radio-console__art-shell {
     position: relative;
     min-height: 0;
@@ -380,31 +533,48 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     inset: 0;
     width: 100%;
     height: 100%;
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      opacity 520ms cubic-bezier(0.2, 0.72, 0.22, 1),
+      filter 620ms cubic-bezier(0.2, 0.72, 0.22, 1);
   }
 
-  .radio-console__artwork-hud {
+  .radio-console__artwork-display {
     position: absolute;
-    top: clamp(18px, 3vw, 38px);
-    left: clamp(18px, 3vw, 38px);
-    width: clamp(130px, 30%, 220px);
-    border: 1px solid rgba(244, 241, 234, 0.42);
+    inset: 0;
     background: #030303;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    filter: blur(12px);
+    pointer-events: none;
+    transform: scale(1.025);
+    transition:
+      opacity 520ms cubic-bezier(0.2, 0.72, 0.22, 1),
+      filter 620ms cubic-bezier(0.2, 0.72, 0.22, 1),
+      transform 720ms cubic-bezier(0.2, 0.72, 0.22, 1);
   }
 
-  .radio-console__artwork-hud img {
+  .radio-console__artwork-display img {
     display: block;
     width: 100%;
-    height: auto;
-    aspect-ratio: 1;
+    height: 100%;
     object-fit: cover;
     filter: grayscale(0.35) brightness(0.72);
+    transition:
+      opacity 180ms ease,
+      filter 260ms ease,
+      transform 380ms cubic-bezier(0.2, 0.72, 0.22, 1);
   }
 
-  .radio-console__artwork-hud span {
+  .radio-console__artwork-display span {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    left: 18px;
     display: block;
     overflow: hidden;
     padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.72);
     color: var(--muted);
     font-size: 8px;
     letter-spacing: 0.08em;
@@ -412,8 +582,36 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     white-space: nowrap;
   }
 
-  .radio-console:not(.radio-console--offline) .radio-console__artwork-hud img {
+  .radio-console:not(.radio-console--offline) .radio-console__artwork-display img,
+  .radio-console:not(.radio-console--offline) .radio-console__info-artwork img {
     filter: none;
+  }
+
+  .radio-console[data-visualizer-mode='artwork'] .radio-console__visualizer {
+    opacity: 0;
+    filter: blur(12px);
+  }
+
+  .radio-console[data-visualizer-mode='artwork'] .radio-console__artwork-display {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+
+  .radio-console__visualizer-toggle {
+    position: absolute;
+    z-index: 4;
+    right: clamp(18px, 3vw, 38px);
+    bottom: 104px;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid rgba(244, 241, 234, 0.42);
+    background: rgba(0, 0, 0, 0.68);
+    color: var(--white);
+    font: 600 8px/1 var(--mono);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
   }
 
   .radio-console__telemetry {
@@ -512,7 +710,64 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
   }
 
   .radio-console__metadata {
+    display: grid;
+    grid-template-columns: clamp(96px, 20%, 150px) minmax(0, 1fr);
+    align-items: center;
     padding: clamp(20px, 3.4vh, 42px) 0 clamp(15px, 2.3vh, 28px);
+    gap: clamp(18px, 2.5vw, 32px);
+  }
+
+  .radio-console__info-artwork {
+    overflow: hidden;
+    border: 1px solid
+      color-mix(in srgb, var(--radio-title-accent, var(--line-strong)), transparent 38%);
+    aspect-ratio: 1;
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+    transition:
+      opacity 420ms ease,
+      filter 520ms ease,
+      transform 620ms cubic-bezier(0.2, 0.72, 0.22, 1);
+  }
+
+  .radio-console__info-artwork img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(0.35) brightness(0.72);
+    transition:
+      opacity 180ms ease,
+      filter 260ms ease,
+      transform 380ms cubic-bezier(0.2, 0.72, 0.22, 1);
+  }
+
+  .radio-console__metadata-copy {
+    min-width: 0;
+    transition:
+      opacity 180ms ease,
+      filter 260ms ease,
+      transform 380ms cubic-bezier(0.2, 0.72, 0.22, 1);
+  }
+
+  .radio-console--track-changing .radio-console__metadata-copy,
+  .radio-console--track-changing .radio-console__artwork-display img,
+  .radio-console--track-changing .radio-console__info-artwork img {
+    opacity: 0;
+    filter: blur(7px);
+    transform: translateY(5px) scale(0.992);
+  }
+
+  .radio-console[data-visualizer-mode='artwork'] .radio-console__metadata {
+    grid-template-columns: 0 minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .radio-console[data-visualizer-mode='artwork'] .radio-console__info-artwork {
+    opacity: 0;
+    filter: blur(10px);
+    pointer-events: none;
+    transform: scale(0.92);
   }
 
   .radio-console__artist {
@@ -599,12 +854,6 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     accent-color: var(--magenta);
   }
 
-  .radio-console__notice {
-    margin: clamp(10px, 1.5vh, 18px) 0 0;
-    color: var(--muted);
-    font-size: 10px;
-  }
-
   .radio-console--offline .live-dot {
     background: #625f5d;
   }
@@ -628,14 +877,41 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     }
   }
 
+  @keyframes radio-surface-reveal {
+    from {
+      opacity: 0;
+      filter: blur(8px);
+      transform: scale(0.992);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: scale(1);
+    }
+  }
+
+  @keyframes radio-detail-reveal {
+    from {
+      opacity: 0;
+      filter: blur(5px);
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: translateY(0);
+    }
+  }
+
   @media (max-width: 900px) {
     .radio-console {
       grid-template-columns: 1fr;
-      flex: none;
+      grid-template-rows: clamp(210px, 26svh, 260px) minmax(0, 1fr);
+      flex: 1;
     }
 
     .radio-console__art-shell {
-      height: clamp(210px, 26svh, 260px);
+      height: auto;
       min-height: 0;
       border-right: 0;
       border-bottom: 1px solid var(--line);
@@ -643,30 +919,40 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     }
 
     .radio-console__visualizer,
-    .radio-console__telemetry {
+    .radio-console__telemetry,
+    .radio-console__visualizer-toggle {
       display: none;
     }
 
-    .radio-console__artwork-hud {
-      inset: 0;
-      width: 100%;
-      border: 0;
-      box-shadow: none;
+    .radio-console__artwork-display {
+      opacity: 1;
+      filter: none;
+      transform: none;
     }
 
-    .radio-console__artwork-hud img {
+    .radio-console__artwork-display img {
       width: 100%;
       height: 100%;
       aspect-ratio: auto;
       object-fit: cover;
     }
 
-    .radio-console__artwork-hud span {
+    .radio-console__artwork-display span {
       position: absolute;
       right: 0;
       bottom: 0;
       left: 0;
       background: rgba(0, 0, 0, 0.72);
+    }
+
+    .radio-console__metadata,
+    .radio-console[data-visualizer-mode='artwork'] .radio-console__metadata {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .radio-console__info-artwork {
+      display: none;
     }
   }
 
@@ -677,6 +963,15 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
 
     .radio-console__controls {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .radio-console__art-shell,
+    .radio-console__readout > * {
+      opacity: 1;
+      filter: none;
+      transform: none;
     }
   }
 </style>

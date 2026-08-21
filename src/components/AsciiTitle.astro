@@ -87,10 +87,14 @@ const columns = Math.max(...ascii.split('\n').map((line) => line.length), 1);
     };
 
     private handleUpdate = (event: Event) => {
-      const detail = (event as CustomEvent<{ id?: string; text?: string }>).detail;
+      const detail = (event as CustomEvent<{ id?: string; text?: string; ascii?: string }>).detail;
       if (!detail?.text || detail.id !== this.dataset.asciiId) return;
       const key = detail.text.toUpperCase();
-      this.activeAscii = this.variants[key] ?? `[ ${key} ]`;
+      const suppliedAscii = detail.ascii?.trim();
+      this.activeAscii =
+        suppliedAscii && suppliedAscii.length <= 12_000
+          ? suppliedAscii
+          : (this.variants[key] ?? `[ ${key} ]`);
       const accessible = this.querySelector<HTMLElement>('[data-ascii-accessible]');
       const source = this.querySelector<HTMLElement>('[data-ascii-source]');
       if (accessible) accessible.textContent = detail.text;
@@ -109,6 +113,9 @@ const columns = Math.max(...ascii.split('\n').map((line) => line.length), 1);
       }
       if (shimmer) shimmer.textContent = this.activeAscii;
       this.dataset.complete = 'true';
+      requestAnimationFrame(() =>
+        this.dispatchEvent(new CustomEvent('lifesteal:prism-ready', { bubbles: true })),
+      );
     }
 
     private play() {
@@ -210,7 +217,7 @@ const columns = Math.max(...ascii.split('\n').map((line) => line.length), 1);
   }
 
   .ascii-card-title[data-complete='true'] .ascii-card-title__shimmer {
-    animation: ascii-title-prism 8.8s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+    animation: ascii-title-prism var(--prism-cycle) cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
     opacity: 0.92;
   }
 
@@ -219,7 +226,7 @@ const columns = Math.max(...ascii.split('\n').map((line) => line.length), 1);
     67% {
       background-position: 125% 50%;
     }
-    88%,
+    91%,
     100% {
       background-position: -25% 50%;
     }

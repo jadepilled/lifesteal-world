@@ -494,6 +494,7 @@ const smallColumns = Math.max(...smallLogoText.split('\n').map((line) => line.le
           typingComplete = true;
           logo.dataset.typing = 'false';
           stage.dataset.terminalReady = 'true';
+          window.dispatchEvent(new CustomEvent('lifesteal:prism-ready'));
           nextLogoSpawnAt = time + 160 + Math.random() * 420;
           if (desktopTerminal.matches && terminalInput) {
             terminalInput.disabled = false;
@@ -767,6 +768,7 @@ const smallColumns = Math.max(...smallLogoText.split('\n').map((line) => line.le
         logo.dataset.typing = 'false';
         typingComplete = true;
         stage.dataset.terminalReady = 'true';
+        window.dispatchEvent(new CustomEvent('lifesteal:prism-ready'));
         if (desktopTerminal.matches && terminalInput) terminalInput.disabled = false;
       }
 

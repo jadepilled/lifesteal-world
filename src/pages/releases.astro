@@ -24,7 +24,7 @@ const metricsEndpoint =
   page="releases"
 >
   <section
-    class="snap-gallery release-gallery panel accent-prism-frame"
+    class="snap-gallery release-gallery panel"
     data-gallery
     data-metrics-endpoint={metricsEndpoint}
     aria-label="LIFESTEAL releases"
@@ -39,15 +39,16 @@ const metricsEndpoint =
             id={release.canonicalId}
             data-gallery-slide
             data-gallery-id={release.canonicalId}
+            data-gallery-sequence={releases.length - index}
             data-gallery-background={release.palette.background}
             data-gallery-surface={release.palette.surface}
             data-gallery-foreground={release.palette.foreground}
             data-gallery-accent={release.palette.accent}
             data-gallery-glow={release.palette.glow}
-            aria-label={`${index + 1} of ${releases.length}: ${release.title}`}
+            aria-label={`Release ${releases.length - index}, ${index + 1} of ${releases.length}: ${release.title}`}
             tabindex="0"
           >
-            <ReleaseCard release={release} index={index} />
+            <ReleaseCard release={release} index={index} sequence={releases.length - index} />
           </div>
         ))
       }
@@ -65,14 +66,14 @@ const metricsEndpoint =
               aria-current={index === 0 ? 'true' : undefined}
               tabindex={index === 0 ? 0 : -1}
             >
-              <span>{String(index + 1).padStart(2, '0')}</span>
+              <span>{String(releases.length - index).padStart(2, '0')}</span>
             </button>
           ))
         }
       </div>
       <span class="snap-gallery__hint">SCROLL / SWIPE / ARROW KEYS</span>
       <output data-gallery-position aria-live="polite">
-        01 / {String(releases.length).padStart(2, '0')}
+        {String(releases.length).padStart(2, '0')} / {String(releases.length).padStart(2, '0')}
       </output>
     </div>
   </section>

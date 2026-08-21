@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "validate:data": "tsx scripts/validate-data.ts",
     "release:add": "tsx scripts/add-release.ts",
+    "radio:ingest": "tsx scripts/ingest-radio-library.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

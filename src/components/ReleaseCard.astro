@@ -8,9 +8,10 @@ import { formatCount } from '../lib/format';
 interface Props {
   release: GeneratedRelease;
   index: number;
+  sequence: number;
 }
 
-const { release, index } = Astro.props;
+const { release, index, sequence } = Astro.props;
 const creditedArtists = releaseArtists(release.artistIds);
 const spotifyLink = release.links.find((link) => link.platform === 'spotify');
 const artworkSourceLink = release.links.find((link) => link.platform === release.artwork.source);
@@ -46,7 +47,7 @@ const soundCloudOnly =
 ---
 
 <article
-  class="release-card accent-prism-frame"
+  class="release-card"
   style={paletteStyle}
   data-release-id={release.canonicalId}
   data-release-focus="artwork"
@@ -97,7 +98,7 @@ const soundCloudOnly =
       <span>02 / RELEASE INFO</span><span>SWIPE DOWN FOR ARTWORK</span>
     </div>
     <div class="release-card__register">
-      <span>REL/{String(index + 1).padStart(3, '0')}</span>
+      <span>REL/{String(sequence).padStart(3, '0')}</span>
       <span class="release-card__status accent-prism-text">[{release.status.toUpperCase()}]</span>
     </div>
     <p class="release-card__artist accent-prism-text">

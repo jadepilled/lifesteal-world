@@ -26,7 +26,7 @@ const metricsEndpoint =
   page="artists"
 >
   <section
-    class="snap-gallery artist-gallery panel accent-prism-frame"
+    class="snap-gallery artist-gallery panel"
     data-gallery
     data-metrics-endpoint={metricsEndpoint}
     aria-label="LIFESTEAL artists"
@@ -51,7 +51,7 @@ const metricsEndpoint =
 
           return (
             <article
-              class="artist-slide accent-prism-frame"
+              class="artist-slide"
               id={artist.slug}
               data-gallery-slide
               data-gallery-id={artist.slug}
@@ -469,7 +469,7 @@ const metricsEndpoint =
 
   .artist-mobile-tabs button::before,
   .artist-mobile-tabs button::after {
-    animation: accent-prism-glow 9s ease-in-out infinite;
+    animation: accent-prism-glow var(--prism-cycle) ease-in-out infinite;
   }
 
   .artist-meta {

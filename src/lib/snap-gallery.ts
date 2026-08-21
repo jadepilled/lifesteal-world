@@ -62,7 +62,8 @@ export function setupSnapGallery(root: HTMLElement) {
       marker.tabIndex = markerIndex === active ? 0 : -1;
     });
     if (position) {
-      position.value = `${String(active + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      const sequence = slides[active]?.dataset.gallerySequence;
+      position.value = `${String(sequence ?? active + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
     }
     if (changed) {
       slides.forEach((slide, slideIndex) => {

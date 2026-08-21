@@ -17,6 +17,7 @@
   --mono: 'IBM Plex Mono', Consolas, monospace;
   --content: min(1480px, calc(100vw - 48px));
   --header-height: 64px;
+  --prism-cycle: 9s;
 }
 
 *,
@@ -268,7 +269,7 @@ h3 {
   color: transparent;
   text-shadow: none;
   -webkit-text-fill-color: transparent;
-  animation: prism-sweep 11.5s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+  animation: prism-sweep var(--prism-cycle) cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
 }
 
 .accent-prism-text {
@@ -290,12 +291,13 @@ h3 {
   color: transparent !important;
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 46%, transparent));
   -webkit-text-fill-color: transparent;
-  animation: accent-prism-text-sweep 9s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+  animation: accent-prism-text-sweep var(--prism-cycle) cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
 }
 
 .accent-prism-frame {
   position: relative;
   isolation: isolate;
+  backface-visibility: hidden;
 }
 
 .accent-prism-frame::after {
@@ -328,7 +330,9 @@ h3 {
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: accent-prism-frame-sweep 9s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+  animation: accent-prism-frame-sweep var(--prism-cycle) cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+  backface-visibility: hidden;
+  will-change: background-position, opacity;
 }
 
 .site-nav {
@@ -455,9 +459,8 @@ h3 {
 
 .site-nav__prompt,
 .button-link::before,
-.terminal-button::before,
-.panel::before {
-  animation: accent-prism-glow 9s ease-in-out infinite;
+.terminal-button::before {
+  animation: accent-prism-glow var(--prism-cycle) ease-in-out infinite;
 }
 
 .button-link::before,
@@ -528,7 +531,7 @@ h3 {
     linear-gradient(90deg, transparent 49.8%, rgba(255, 255, 255, 0.045) 50%, transparent 50.2%),
     linear-gradient(transparent 49.8%, rgba(255, 255, 255, 0.045) 50%, transparent 50.2%),
     radial-gradient(
-      circle at 50% 40%,
+      circle at 50% 49%,
       color-mix(in srgb, var(--terminal-primary) 13%, transparent),
       transparent 42%
     ),
@@ -542,7 +545,7 @@ h3 {
   display: flex;
   align-items: flex-start;
   width: max-content;
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - clamp(52px, 9cqw, 138px));
   flex-direction: column;
   transition:
     opacity 220ms ease,
@@ -554,7 +557,12 @@ h3 {
   z-index: 2;
   margin: 0;
   font-family: var(--mono);
-  font-size: clamp(6px, calc((100cqw - 34px) / var(--logo-columns) * 1.68), 23px);
+  max-width: calc(100cqw - clamp(52px, 9cqw, 138px));
+  font-size: clamp(
+    6px,
+    calc((100cqw - clamp(52px, 9cqw, 138px)) / var(--logo-columns) * 1.68),
+    23px
+  );
   font-weight: 600;
   line-height: 1.1;
   white-space: pre;
@@ -931,10 +939,10 @@ h3 {
 
 @keyframes prism-sweep {
   0%,
-  62% {
+  67% {
     background-position: 125% 50%;
   }
-  87%,
+  91%,
   100% {
     background-position: -25% 50%;
   }
@@ -1230,7 +1238,8 @@ h3 {
   }
 
   .ascii-logo {
-    font-size: clamp(5px, calc((100cqw - 22px) / var(--logo-columns) * 1.68), 9px);
+    max-width: calc(100cqw - 34px);
+    font-size: clamp(5px, calc((100cqw - 34px) / var(--logo-columns) * 1.68), 9px);
   }
 
   .ascii-stage__tagline {

@@ -379,6 +379,7 @@ test('release and store records are canonical and intentionally pending', async 
   expect(new Set(releaseIds).size).toBe(releaseIds.length);
   await page.getByRole('button', { name: 'Show LIFE IS BEAUTIFUL' }).click();
   await expect(page.getByText('02 OCT 2026')).toBeVisible();
+  await expect(page.locator('[data-gallery-position]')).toHaveText('11 / 11');
   await page.getByRole('button', { name: 'Show AUDIOCLUB' }).click();
   await expect(page.getByText('25 SEPT 2026')).toBeVisible();
   await expect(page.locator('[data-gallery-position]')).toHaveText('10 / 11');
@@ -393,6 +394,14 @@ test('release and store records are canonical and intentionally pending', async 
   await expect(internetDepressionClub.locator('a[href*="listen.tidal.com"]')).toHaveCount(1);
   await expect(internetDepressionClub.getByText('Hyperpop', { exact: true })).toBeVisible();
   await expect(page.locator('[data-release-id]')).toHaveCount(11);
+  await expect(page.locator('[data-release-id]').first()).toHaveAttribute(
+    'data-release-id',
+    'hazelmere-life-is-beautiful',
+  );
+  await expect(page.locator('[data-release-id]').last()).toHaveAttribute(
+    'data-release-id',
+    'starstrike-internet-depression-club',
+  );
   await page.goto(siteUrl('/store/'));
   await expect(page.locator('.page-heading')).toHaveCount(0);
   await expect(page.getByText('PRE-SAVE LINK INITIALISING')).toHaveCount(2);
@@ -430,6 +439,7 @@ test('mobile release cards magnetically page between artwork and information', a
   test.skip(!isMobile, 'The two-focus-panel viewport is mobile-specific.');
   await page.setViewportSize({ width: 440, height: 956 });
   await page.goto(siteUrl('/releases/'));
+  await page.getByRole('button', { name: 'Show internet depression club!!! >__<' }).click();
   const card = page.locator('#starstrike-internet-depression-club [data-release-id]');
   await expect(card).toHaveAttribute('data-release-focus', 'artwork');
   const geometry = await card.evaluate((element) => ({
@@ -525,11 +535,28 @@ test('radio loads live metadata into the lightweight broadcast HUD', async ({ pa
   await page.goto(siteUrl('/radio/'));
   await expect(page.getByRole('button', { name: 'JOIN LIVE SIGNAL' })).toBeEnabled();
   await expect(page.getByText('NOW TRANSMITTING')).toHaveCount(0);
+  await expect(
+    page.getByText('Playback begins only after you choose to join.', { exact: false }),
+  ).toHaveCount(0);
   await expect(page.locator('[data-radio-artist]')).toHaveText('HAZELMERE');
   await expect(page.getByRole('heading', { name: 'LIFE IS BEAUTIFUL' })).toBeVisible();
-  await expect(page.locator('[data-radio-format]')).toHaveText('MP3 / 128K');
-  if (isMobile) await expect(page.locator('[data-radio-visualizer]')).toBeHidden();
-  else await expect(page.locator('[data-radio-visualizer]')).toBeVisible();
+  await expect(page.locator('[data-radio-ping]')).toContainText('MS');
+  await expect(page.locator('[data-radio-downlink]')).not.toBeEmpty();
+  await expect(page.locator('[data-radio-buffer]')).not.toBeEmpty();
+  if (isMobile) {
+    await expect(page.locator('[data-radio-visualizer]')).toBeHidden();
+    await expect(page.locator('[data-radio-visualizer-toggle]')).toBeHidden();
+  } else {
+    await expect(page.locator('[data-radio-visualizer]')).toBeVisible();
+    const visualizerToggle = page.locator('[data-radio-visualizer-toggle]');
+    await expect(visualizerToggle).toHaveAttribute('aria-pressed', 'true');
+    await visualizerToggle.click();
+    await expect(page.locator('[data-radio-console]')).toHaveAttribute(
+      'data-visualizer-mode',
+      'artwork',
+    );
+    await expect(visualizerToggle).toHaveAttribute('aria-pressed', 'false');
+  }
   await expect(page.getByText('STATION MANIFEST')).toHaveCount(0);
 });
 

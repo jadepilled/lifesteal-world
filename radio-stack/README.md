@@ -4,6 +4,14 @@ The production radio is a deliberately small native stack: Icecast provides one 
 
 ## Add or change a track
 
+For a folder or album-sized import, prepare an upload package locally first. The ingest command deduplicates alternate encodings, reads embedded tags and covers, creates artwork-derived palettes, skips damaged files, and normalizes audio to the station's low-overhead format:
+
+```sh
+npm run radio:ingest -- "C:\path\to\music" ".radio-staging"
+```
+
+Upload `.radio-staging/tracks/`, `.radio-staging/artwork/`, and the generated `catalogue.json` using SFTP or `scp`, then continue from step 3 below.
+
 1. Open a fresh SSH/SFTP session so the `lifesteal-radio` group is active. Upload owned audio and artwork, for example:
 
    ```sh
@@ -18,6 +26,6 @@ The production radio is a deliberately small native stack: Icecast provides one 
 4. Run `sudo systemctl restart lifesteal-radio` to begin using the new catalogue. Existing listeners reconnect automatically.
 5. Check `https://radio.lifesteal.world/health`, `https://radio.lifesteal.world/now-playing.json`, and `sudo journalctl -u lifesteal-radio -n 50 --no-pager`.
 
-Use `enabled: false` to keep a catalogue entry staged without broadcasting it. `order` controls rotation order. Audio is encoded once at 128 kbps MP3 to limit CPU and bandwidth; every listener joins the same live mount rather than starting an individual file.
+Use `enabled: false` to keep a catalogue entry staged without broadcasting it. The scheduler uses a fresh shuffled bag for each complete rotation and prevents the previous track from immediately repeating when it reshuffles. `order` is retained only as editorial metadata. Audio is encoded once at 128 kbps MP3 to limit CPU and bandwidth; every listener joins the same live mount rather than starting an individual file.
 
 Server passwords and Icecast source/admin credentials belong only in `/etc/lifesteal-radio.env` and `/etc/icecast2/icecast.xml`. They must never be committed.
