@@ -26,6 +26,7 @@
     "spotifyArtistId": null,
     "soundcloudProfileUrl": "https://soundcloud.com/hazelmere/",
     "metricsSnapshot": {
+      "plays30d": 1984,
       "soundcloudFollowers": 443,
       "spotifyMonthlyListeners": null,
       "asOf": "2026-08-21T05:30:00.000Z"
@@ -66,6 +67,7 @@
     "spotifyArtistId": "4MkRcUXF9bFAN8mxl8Cc7h",
     "soundcloudProfileUrl": "https://soundcloud.com/starstrike/",
     "metricsSnapshot": {
+      "plays30d": null,
       "soundcloudFollowers": 3,
       "spotifyMonthlyListeners": 30,
       "asOf": "2026-08-21T05:30:00.000Z"

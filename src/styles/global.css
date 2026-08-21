@@ -190,7 +190,7 @@ h3 {
 .wordmark {
   position: relative;
   display: grid;
-  width: clamp(150px, 13vw, 196px);
+  width: clamp(170px, 15vw, 220px);
   overflow: hidden;
   color: var(--white);
   text-decoration: none;
@@ -202,9 +202,9 @@ h3 {
   width: max-content;
   margin: 0;
   font-family: var(--mono);
-  font-size: clamp(3.6px, 0.33vw, 5px);
-  font-weight: 600;
-  line-height: 0.96;
+  font-size: clamp(5px, 0.43vw, 6.4px);
+  font-weight: 700;
+  line-height: 1;
   white-space: pre;
 }
 
@@ -1041,12 +1041,12 @@ h3 {
   }
 
   .wordmark {
-    width: 102px;
+    width: 118px;
     flex: none;
   }
 
   .wordmark pre {
-    font-size: 2.6px;
+    font-size: 4px;
   }
 
   .site-main {

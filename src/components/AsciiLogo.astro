@@ -380,8 +380,9 @@ const logoText = String.raw`    ___ ____          __             __
       };
 
       const draw = (time: number) => {
+        if (!context || reducedMotion.matches) return;
         frame = requestAnimationFrame(draw);
-        if (!context || reducedMotion.matches || document.hidden || !visible) return;
+        if (document.hidden || !visible) return;
         typeLogo(time);
         if (lastTime === 0) lastTime = time;
         const frameInterval = mobileViewport.matches ? 1000 / 24 : 1000 / 32;
@@ -657,7 +658,7 @@ const logoText = String.raw`    ___ ____          __             __
       );
       resizeObserver.observe(stage);
       visibilityObserver.observe(stage);
-      frame = requestAnimationFrame(draw);
+      if (!reducedMotion.matches) frame = requestAnimationFrame(draw);
 
       document.addEventListener(
         'astro:before-swap',

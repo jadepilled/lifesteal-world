@@ -115,7 +115,11 @@ const metricsEndpoint =
                     </li>
                     <li>
                       <span>PLAYS (30D)</span>
-                      <strong data-artist-metric="plays30d">COLLECTING</strong>
+                      <strong data-artist-metric="plays30d">
+                        {artist.metricsSnapshot.plays30d === null
+                          ? 'COLLECTING'
+                          : formatCount(artist.metricsSnapshot.plays30d)}
+                      </strong>
                     </li>
                     <li>
                       <span>SOUNDCLOUD FOLLOWERS</span>
@@ -257,8 +261,10 @@ const metricsEndpoint =
           const willOpen = button.getAttribute('aria-expanded') !== 'true';
           buttons.forEach((candidate) => candidate.setAttribute('aria-expanded', 'false'));
           panels.forEach((panel) => delete panel.dataset.open);
+          delete slide.dataset.panelOpen;
           if (willOpen && requested) {
             button.setAttribute('aria-expanded', 'true');
+            slide.dataset.panelOpen = requested;
             const panel = panels.find((candidate) => candidate.dataset.artistPanel === requested);
             if (panel) panel.dataset.open = 'true';
           }
@@ -540,6 +546,11 @@ const metricsEndpoint =
     .artist-slide {
       grid-template-columns: 1fr;
       grid-template-rows: minmax(260px, 48%) minmax(0, 1fr);
+      transition: grid-template-rows 360ms cubic-bezier(0.2, 0.72, 0.22, 1);
+    }
+
+    .artist-slide[data-panel-open] {
+      grid-template-rows: minmax(190px, 30svh) minmax(0, 1fr);
     }
 
     .artist-slide__image-wrap {
@@ -608,9 +619,14 @@ const metricsEndpoint =
     }
 
     .artist-slide__panel[data-open='true'] {
-      max-height: min(58svh, 560px);
+      max-height: min(44svh, 420px);
       padding-top: 16px;
+      padding-right: 6px;
+      overflow-y: auto;
       opacity: 1;
+      overscroll-behavior: contain;
+      scrollbar-color: var(--artist-accent) color-mix(in srgb, var(--artist-surface), #000 50%);
+      scrollbar-width: thin;
       visibility: visible;
       transform: none;
       transition-delay: 0s;
@@ -640,6 +656,7 @@ const metricsEndpoint =
   @media (max-width: 540px) {
     .artist-stats {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 12px;
     }
 
     .artist-stats li:nth-child(2) {
@@ -648,6 +665,15 @@ const metricsEndpoint =
 
     .artist-stats li:nth-child(-n + 2) {
       border-bottom: 1px solid color-mix(in srgb, var(--artist-accent), transparent 75%);
+    }
+
+    .artist-stats li {
+      min-height: 54px;
+      padding: 8px;
+    }
+
+    .artist-stats strong {
+      font-size: 19px;
     }
 
     .artist-meta div {

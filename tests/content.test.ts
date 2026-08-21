@@ -50,6 +50,15 @@ describe('checked-in content', () => {
     });
   });
 
+  it('uses only supportable 30-day artist snapshots', () => {
+    expect(artists.find((artist) => artist.id === 'hazelmere')?.metricsSnapshot.plays30d).toBe(
+      1984,
+    );
+    expect(
+      artists.find((artist) => artist.id === 'starstrike')?.metricsSnapshot.plays30d,
+    ).toBeNull();
+  });
+
   it('keeps release text readable over generated surfaces', () => {
     releases.forEach((release) => {
       expect(

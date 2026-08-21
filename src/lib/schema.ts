@@ -32,6 +32,7 @@ export const artistSchema = z.object({
   spotifyArtistId: z.string().nullable(),
   soundcloudProfileUrl: httpUrl.nullable(),
   metricsSnapshot: z.object({
+    plays30d: z.number().int().nonnegative().nullable(),
     soundcloudFollowers: z.number().int().nonnegative().nullable(),
     spotifyMonthlyListeners: z.number().int().nonnegative().nullable(),
     asOf: z.iso.datetime(),
