@@ -1,0 +1,233 @@
+---
+import figlet from 'figlet';
+
+interface Props {
+  text: string;
+  accent: string;
+  id?: string;
+  variants?: string[];
+  class?: string;
+}
+
+const { text, accent, id, variants = [], class: className = '' } = Astro.props;
+
+const renderAscii = (value: string) =>
+  figlet
+    .textSync(value.toUpperCase(), {
+      font: 'Slant',
+      horizontalLayout: 'fitted',
+      verticalLayout: 'fitted',
+      whitespaceBreak: true,
+    })
+    .trimEnd();
+
+const variantMap = Object.fromEntries(
+  [...new Set([text, ...variants])].map((value) => [value.toUpperCase(), renderAscii(value)]),
+);
+const ascii = variantMap[text.toUpperCase()] ?? renderAscii(text);
+const columns = Math.max(...ascii.split('\n').map((line) => line.length), 1);
+---
+
+<ascii-title
+  class:list={['ascii-card-title', className]}
+  data-ascii-title
+  data-ascii-id={id}
+  data-ascii-variants={JSON.stringify(variantMap)}
+  style={`--ascii-title-accent:${accent};--ascii-title-columns:${columns}`}
+>
+  <h2 class="visually-hidden" data-ascii-accessible>{text}</h2>
+  <pre
+    aria-hidden="true"
+    data-ascii-pre><span class="ascii-card-title__measure" data-ascii-source>{ascii}</span><span class="ascii-card-title__output" data-ascii-output /><span class="ascii-card-title__shimmer" data-ascii-shimmer /></pre>
+</ascii-title>
+
+<script>
+  class LifestealAsciiTitle extends HTMLElement {
+    private frame = 0;
+    private observer?: IntersectionObserver;
+    private variants: Record<string, string> = {};
+    private activeAscii = '';
+    private visible = false;
+    private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    connectedCallback() {
+      try {
+        this.variants = JSON.parse(this.dataset.asciiVariants ?? '{}') as Record<string, string>;
+      } catch {
+        this.variants = {};
+      }
+      this.activeAscii = this.querySelector<HTMLElement>('[data-ascii-source]')?.textContent ?? '';
+      if (this.reducedMotion.matches) {
+        this.renderComplete();
+      } else {
+        this.observer = new IntersectionObserver(
+          ([entry]) => {
+            const nextVisible = entry?.isIntersecting ?? false;
+            if (nextVisible && !this.visible) this.play();
+            this.visible = nextVisible;
+          },
+          { threshold: 0.58 },
+        );
+        this.observer.observe(this);
+      }
+      window.addEventListener('lifesteal:ascii-title', this.handleUpdate);
+    }
+
+    disconnectedCallback() {
+      cancelAnimationFrame(this.frame);
+      this.observer?.disconnect();
+      window.removeEventListener('lifesteal:ascii-title', this.handleUpdate);
+    }
+
+    private handleUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: string; text?: string }>).detail;
+      if (!detail?.text || detail.id !== this.dataset.asciiId) return;
+      const key = detail.text.toUpperCase();
+      this.activeAscii = this.variants[key] ?? `[ ${key} ]`;
+      const accessible = this.querySelector<HTMLElement>('[data-ascii-accessible]');
+      const source = this.querySelector<HTMLElement>('[data-ascii-source]');
+      if (accessible) accessible.textContent = detail.text;
+      if (source) source.textContent = this.activeAscii;
+      const columns = Math.max(...this.activeAscii.split('\n').map((line) => line.length), 1);
+      this.style.setProperty('--ascii-title-columns', String(columns));
+      this.reducedMotion.matches ? this.renderComplete() : this.play();
+    };
+
+    private renderComplete() {
+      const output = this.querySelector<HTMLElement>('[data-ascii-output]');
+      const shimmer = this.querySelector<HTMLElement>('[data-ascii-shimmer]');
+      if (output) {
+        output.textContent = this.activeAscii;
+        output.style.opacity = '1';
+      }
+      if (shimmer) shimmer.textContent = this.activeAscii;
+      this.dataset.complete = 'true';
+    }
+
+    private play() {
+      cancelAnimationFrame(this.frame);
+      const output = this.querySelector<HTMLElement>('[data-ascii-output]');
+      const shimmer = this.querySelector<HTMLElement>('[data-ascii-shimmer]');
+      if (!output || !shimmer) return;
+      const duration = Math.min(1650, Math.max(850, this.activeAscii.length * 4.2));
+      const started = performance.now();
+      this.dataset.complete = 'false';
+      output.textContent = '';
+      shimmer.textContent = '';
+      output.style.opacity = '0';
+
+      const type = (time: number) => {
+        const progress = Math.min(1, (time - started) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const count = Math.floor(this.activeAscii.length * eased);
+        const visibleText = this.activeAscii.slice(0, count);
+        output.textContent = visibleText;
+        shimmer.textContent = visibleText;
+        output.style.opacity = String(Math.min(1, progress * 1.7));
+        if (progress < 1) {
+          this.frame = requestAnimationFrame(type);
+        } else {
+          this.renderComplete();
+        }
+      };
+      this.frame = requestAnimationFrame(type);
+    }
+  }
+
+  if (!customElements.get('ascii-title')) {
+    customElements.define('ascii-title', LifestealAsciiTitle);
+  }
+</script>
+
+<style>
+  .ascii-card-title {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    container-type: inline-size;
+  }
+
+  .ascii-card-title pre {
+    position: relative;
+    width: max-content;
+    max-width: 100%;
+    margin: 5px 0 clamp(14px, 2vh, 24px);
+    font-family: var(--mono);
+    font-size: clamp(4px, calc(100cqw / var(--ascii-title-columns) * 1.56), 10px);
+    font-weight: 600;
+    line-height: 1.04;
+    white-space: pre;
+  }
+
+  .ascii-card-title__measure {
+    visibility: hidden;
+  }
+
+  .ascii-card-title__output,
+  .ascii-card-title__shimmer {
+    position: absolute;
+    inset: 0;
+    display: block;
+    white-space: pre;
+  }
+
+  .ascii-card-title__output {
+    color: var(--ascii-title-accent);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ascii-title-accent) 68%, transparent));
+    transition: opacity 100ms linear;
+  }
+
+  .ascii-card-title__shimmer {
+    background: linear-gradient(
+      108deg,
+      transparent 0%,
+      transparent 40%,
+      #37eaff 45.5%,
+      #fff 49.2%,
+      #ff3bd7 52.8%,
+      #ffe36e 56%,
+      transparent 62%,
+      transparent 100%
+    );
+    background-position: 125% 50%;
+    background-size: 360% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--ascii-title-accent) 52%, transparent));
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ascii-card-title[data-complete='true'] .ascii-card-title__shimmer {
+    animation: ascii-title-prism 8.8s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+    opacity: 0.92;
+  }
+
+  @keyframes ascii-title-prism {
+    0%,
+    67% {
+      background-position: 125% 50%;
+    }
+    88%,
+    100% {
+      background-position: -25% 50%;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .ascii-card-title pre {
+      margin-bottom: 12px;
+      font-size: clamp(3.5px, calc(100cqw / var(--ascii-title-columns) * 1.5), 7px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ascii-card-title__shimmer {
+      display: none;
+    }
+  }
+</style>

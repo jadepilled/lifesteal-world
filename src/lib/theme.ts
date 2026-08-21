@@ -1,5 +1,6 @@
 export type ThemeMode = {
   name: string;
+  command: string;
   accent: string;
   logo: readonly string[];
   logoBackground?: string;
@@ -7,71 +8,31 @@ export type ThemeMode = {
 };
 
 export const THEME_STORAGE_KEY = 'lifesteal.theme';
+export const THEME_ACCENT_STORAGE_KEY = 'lifesteal.accent';
+
+const solid = (command: string, name: string, color: string, rain: readonly string[] = [color]) =>
+  ({
+    command,
+    name,
+    accent: color,
+    logo: [color],
+    rain,
+  }) satisfies ThemeMode;
 
 export const themeModes: Record<string, ThemeMode> = {
-  DEFAULT: {
-    name: 'default',
-    accent: '#ff304f',
-    logo: ['#f7f7f5'],
-    rain: ['#ff304f'],
-  },
-  WHITE: { name: 'white', accent: '#f7f7f5', logo: ['#ffffff'], rain: ['#ffffff'] },
-  RED: {
-    name: 'red',
-    accent: '#ff304f',
-    logo: ['#ff304f'],
-    rain: ['#ff304f', '#ff6b7f'],
-  },
-  BLUE: {
-    name: 'blue',
-    accent: '#2f7cff',
-    logo: ['#2f7cff'],
-    rain: ['#2f7cff', '#72d7ff'],
-  },
-  GREEN: {
-    name: 'green',
-    accent: '#2de37b',
-    logo: ['#2de37b'],
-    rain: ['#2de37b', '#a4ffbf'],
-  },
-  PINK: {
-    name: 'pink',
-    accent: '#ff4fa7',
-    logo: ['#ff4fa7'],
-    rain: ['#ff4fa7', '#ff9bd0'],
-  },
-  PURPLE: {
-    name: 'purple',
-    accent: '#a855f7',
-    logo: ['#a855f7'],
-    rain: ['#a855f7', '#d7a6ff'],
-  },
-  ORANGE: {
-    name: 'orange',
-    accent: '#ff7a1a',
-    logo: ['#ff7a1a'],
-    rain: ['#ff7a1a', '#ffc067'],
-  },
-  YELLOW: {
-    name: 'yellow',
-    accent: '#ffd400',
-    logo: ['#ffd400'],
-    rain: ['#ffd400', '#fff09a'],
-  },
-  CYAN: {
-    name: 'cyan',
-    accent: '#24d8ff',
-    logo: ['#24d8ff'],
-    rain: ['#24d8ff', '#b6f6ff'],
-  },
-  MAGENTA: {
-    name: 'magenta',
-    accent: '#ff2ed1',
-    logo: ['#ff2ed1'],
-    rain: ['#ff2ed1', '#ff9aea'],
-  },
+  WHITE: solid('WHITE', 'white', '#f7f7f5'),
+  RED: solid('RED', 'red', '#ff304f', ['#ff304f', '#ff6b7f']),
+  BLUE: solid('BLUE', 'blue', '#2f7cff', ['#2f7cff', '#72d7ff']),
+  GREEN: solid('GREEN', 'green', '#2de37b', ['#2de37b', '#a4ffbf']),
+  PINK: solid('PINK', 'pink', '#ff4fa7', ['#ff4fa7', '#ff9bd0']),
+  PURPLE: solid('PURPLE', 'purple', '#a855f7', ['#a855f7', '#d7a6ff']),
+  ORANGE: solid('ORANGE', 'orange', '#ff7a1a', ['#ff7a1a', '#ffc067']),
+  YELLOW: solid('YELLOW', 'yellow', '#ffd400', ['#ffd400', '#fff09a']),
+  CYAN: solid('CYAN', 'cyan', '#24d8ff', ['#24d8ff', '#b6f6ff']),
+  MAGENTA: solid('MAGENTA', 'magenta', '#ff2ed1', ['#ff2ed1', '#ff9aea']),
   GAY: {
     name: 'gay',
+    command: 'GAY',
     accent: '#26ceaa',
     logo: ['#078d70', '#26ceaa', '#98e8c1', '#ffffff', '#7bade2', '#5049cc', '#3d1a78'],
     logoBackground:
@@ -80,6 +41,7 @@ export const themeModes: Record<string, ThemeMode> = {
   },
   LESBIAN: {
     name: 'lesbian',
+    command: 'LESBIAN',
     accent: '#d362a4',
     logo: ['#d52d00', '#ff9a56', '#ffffff', '#d362a4', '#a30262'],
     logoBackground:
@@ -88,6 +50,7 @@ export const themeModes: Record<string, ThemeMode> = {
   },
   PAN: {
     name: 'pansexual',
+    command: 'PAN',
     accent: '#ff218c',
     logo: ['#ff218c', '#ffd800', '#21b1ff'],
     logoBackground:
@@ -96,6 +59,7 @@ export const themeModes: Record<string, ThemeMode> = {
   },
   BI: {
     name: 'bisexual',
+    command: 'BI',
     accent: '#d60270',
     logo: ['#d60270', '#9b4f96', '#0038a8'],
     logoBackground:
@@ -104,6 +68,7 @@ export const themeModes: Record<string, ThemeMode> = {
   },
   TRANS: {
     name: 'transgender',
+    command: 'TRANS',
     accent: '#5bcefa',
     logo: ['#5bcefa', '#f5a9b8', '#ffffff', '#f5a9b8', '#5bcefa'],
     logoBackground:
@@ -112,6 +77,7 @@ export const themeModes: Record<string, ThemeMode> = {
   },
   INTERSEX: {
     name: 'intersex',
+    command: 'INTERSEX',
     accent: '#7902aa',
     logo: ['#ffd800', '#7902aa', '#ffd800'],
     logoBackground:
@@ -120,6 +86,7 @@ export const themeModes: Record<string, ThemeMode> = {
   },
   RAINBOW: {
     name: 'rainbow',
+    command: 'RAINBOW',
     accent: '#e40303',
     logo: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#24408e', '#732982'],
     logoBackground:
@@ -128,6 +95,7 @@ export const themeModes: Record<string, ThemeMode> = {
   },
   ABORIGINAL: {
     name: 'aboriginal',
+    command: 'ABORIGINAL',
     accent: '#dd0000',
     logo: ['#000000', '#dd0000', '#ffcf00'],
     logoBackground:
@@ -136,32 +104,98 @@ export const themeModes: Record<string, ThemeMode> = {
   },
 };
 
+const colourTokens: Record<string, string> = {
+  WHITE: '#f7f7f5',
+  BLACK: '#050505',
+  RED: '#ff304f',
+  CRIMSON: '#dc143c',
+  SCARLET: '#ff2400',
+  CORAL: '#ff6f61',
+  ORANGE: '#ff7a1a',
+  AMBER: '#ffbf00',
+  GOLD: '#ffd700',
+  YELLOW: '#ffd400',
+  LIME: '#a8ff2d',
+  GREEN: '#2de37b',
+  EMERALD: '#00a86b',
+  MINT: '#74f2ce',
+  TEAL: '#18b7a0',
+  CYAN: '#24d8ff',
+  AQUA: '#00ffff',
+  SKY: '#72d7ff',
+  BLUE: '#2f7cff',
+  NAVY: '#123a8c',
+  INDIGO: '#4b42c3',
+  PURPLE: '#a855f7',
+  VIOLET: '#8f42ff',
+  LAVENDER: '#c5a3ff',
+  MAGENTA: '#ff2ed1',
+  PINK: '#ff4fa7',
+  ROSE: '#ff668f',
+  PEACH: '#ffb38a',
+};
+
 const aliases: Record<string, string> = {
-  PANSEXUAL: 'PAN',
+  DEFAULT: 'BI',
   BISEXUAL: 'BI',
+  PANSEXUAL: 'PAN',
   TRANSGENDER: 'TRANS',
   LGBT: 'RAINBOW',
+  PRIDE: 'RAINBOW',
   INDIGENOUS: 'ABORIGINAL',
   GREY: 'WHITE',
   GRAY: 'WHITE',
 };
 
+const makeGradient = (colors: readonly string[]) => {
+  if (colors.length === 1) return `linear-gradient(90deg, ${colors[0]}, ${colors[0]})`;
+  return `linear-gradient(90deg, ${colors
+    .map((color, index) => `${color} ${(index / Math.max(1, colors.length - 1)) * 100}%`)
+    .join(', ')})`;
+};
+
+export function logoBackground(mode: ThemeMode): string {
+  return mode.logoBackground ?? makeGradient(mode.logo);
+}
+
+const modeByName = (value: string) =>
+  Object.values(themeModes).find((mode) => mode.name.toUpperCase() === value.toUpperCase());
+
 export function resolveThemeCommand(value: string): ThemeMode | undefined {
-  const submitted = value.trim().toUpperCase();
-  return themeModes[aliases[submitted] ?? submitted];
+  const submitted = value.trim().toUpperCase().replace(/\s+/g, ' ');
+  if (!submitted) return undefined;
+  const alias = aliases[submitted] ?? submitted;
+  const named = themeModes[alias] ?? modeByName(alias);
+  if (named) return named;
+
+  const tokens = submitted.split(' ');
+  const colors = tokens.map((token) => colourTokens[aliases[token] ?? token]);
+  if (colors.some((color) => !color)) return undefined;
+  const resolved = colors as string[];
+  return {
+    name: tokens.length === 1 ? tokens[0]!.toLowerCase() : 'custom-gradient',
+    command: submitted,
+    accent: resolved[0]!,
+    logo: resolved,
+    logoBackground: makeGradient(resolved),
+    rain: resolved,
+  };
 }
 
 export function findThemeByName(name: string | null): ThemeMode {
-  return Object.values(themeModes).find((mode) => mode.name === name) ?? themeModes.DEFAULT;
+  if (!name) return themeModes.BI!;
+  return resolveThemeCommand(name) ?? themeModes.BI!;
 }
 
 export function applyTheme(mode: ThemeMode, persist = true): void {
   const root = document.documentElement;
   root.dataset.theme = mode.name;
   root.style.setProperty('--accent', mode.accent);
+  root.style.setProperty('--site-logo-background', logoBackground(mode));
   if (persist) {
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, mode.name);
+      localStorage.setItem(THEME_STORAGE_KEY, mode.command);
+      localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
     } catch {
       // A denied storage write should not stop the visual theme from changing.
     }
@@ -174,9 +208,14 @@ export function applyStoredTheme(): ThemeMode {
   try {
     stored = localStorage.getItem(THEME_STORAGE_KEY);
   } catch {
-    // Keep the default palette when storage is unavailable.
+    // Keep the BI palette when storage is unavailable.
   }
   const mode = findThemeByName(stored);
   applyTheme(mode, false);
+  try {
+    localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
+  } catch {
+    // The resolved theme still applies when storage cannot be updated.
+  }
   return mode;
 }

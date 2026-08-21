@@ -34,6 +34,8 @@
     "@axe-core/playwright": "4.13.0",
     "@lhci/cli": "0.15.1",
     "@playwright/test": "1.62.1",
+    "@types/figlet": "^1.7.0",
+    "figlet": "^1.11.4",
     "prettier": "3.9.6",
     "prettier-plugin-astro": "0.14.1",
     "tsx": "4.23.12",

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AsciiTitle from '../components/AsciiTitle.astro';
 import { artistById, presaves } from '../lib/content';
 import { withBase } from '../lib/base';
 ---
@@ -45,7 +46,7 @@ import { withBase } from '../lib/base';
             />
             <div class="store-item__copy">
               <p class="store-item__artist">{artist?.displayName ?? 'HAZELMERE'}</p>
-              <h2>{entry.title}</h2>
+              <AsciiTitle text={entry.title} accent="var(--item-accent)" />
               <p>{entry.copy}</p>
               {actionable ? (
                 <a
@@ -128,16 +129,6 @@ import { withBase } from '../lib/base';
     color: var(--item-accent);
     font-size: 11px;
     letter-spacing: 0.12em;
-  }
-
-  .store-item h2 {
-    margin: 2px 0 clamp(9px, 1.4vh, 16px);
-    font-family: var(--display);
-    font-size: clamp(46px, 7vh, 76px);
-    font-weight: 900;
-    line-height: 0.82;
-    letter-spacing: -0.055em;
-    text-shadow: 0 0 22px color-mix(in srgb, var(--item-glow), transparent 60%);
   }
 
   .store-item__copy > p:last-of-type {

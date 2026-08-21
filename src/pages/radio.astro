@@ -1,5 +1,5 @@
 ---
-import PageHeading from '../components/PageHeading.astro';
+import AsciiTitle from '../components/AsciiTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { radioTracks } from '../lib/content';
 import { withBase } from '../lib/base';
@@ -19,8 +19,6 @@ const initialTrack = radioTracks[0];
   image={initialTrack?.artwork.src}
   page="radio"
 >
-  <PageHeading title="radio" status={stationEnabled ? 'LIVE' : 'OFFLINE'} />
-
   <section
     class:list={['radio-console', 'panel', { 'radio-console--offline': !stationEnabled }]}
     data-radio-console
@@ -57,7 +55,16 @@ const initialTrack = radioTracks[0];
       <div class="radio-console__metadata">
         <span class="eyebrow">NOW TRANSMITTING</span>
         <p class="radio-console__artist" data-radio-artist>{initialTrack?.artist}</p>
-        <h2 data-radio-title>{initialTrack?.title}</h2>
+        {
+          initialTrack && (
+            <AsciiTitle
+              text={initialTrack.title}
+              variants={radioTracks.map((track) => track.title)}
+              accent="var(--magenta)"
+              id="radio-now-playing"
+            />
+          )
+        }
         <p class="radio-console__album" data-radio-album>
           {initialTrack?.album} / {initialTrack?.year} / {initialTrack?.label}
         </p>
@@ -136,7 +143,6 @@ const initialTrack = radioTracks[0];
     const volume = consoleElement.querySelector<HTMLInputElement>('[data-radio-volume]');
     const state = consoleElement.querySelector<HTMLElement>('[data-radio-state]');
     const notice = consoleElement.querySelector<HTMLElement>('[data-radio-notice]');
-    const title = consoleElement.querySelector<HTMLElement>('[data-radio-title]');
     const artist = consoleElement.querySelector<HTMLElement>('[data-radio-artist]');
     const album = consoleElement.querySelector<HTMLElement>('[data-radio-album]');
     const artwork = consoleElement.querySelector<HTMLImageElement>('[data-radio-artwork]');
@@ -215,7 +221,13 @@ const initialTrack = radioTracks[0];
         const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) return;
         const metadata = (await response.json()) as NowPlaying;
-        if (title && metadata.title) title.textContent = metadata.title;
+        if (metadata.title) {
+          window.dispatchEvent(
+            new CustomEvent('lifesteal:ascii-title', {
+              detail: { id: 'radio-now-playing', text: metadata.title },
+            }),
+          );
+        }
         if (artist && metadata.artist) artist.textContent = metadata.artist;
         if (album) {
           album.textContent = [metadata.album, metadata.year, metadata.label]
@@ -348,16 +360,6 @@ const initialTrack = radioTracks[0];
     letter-spacing: 0.12em;
   }
 
-  .radio-console h2 {
-    margin: 2px 0 21px;
-    font-family: var(--display);
-    font-size: clamp(58px, 8vh, 96px);
-    font-weight: 900;
-    line-height: 0.76;
-    letter-spacing: -0.055em;
-    text-shadow: 0 0 25px rgba(242, 166, 255, 0.3);
-  }
-
   .radio-console__album {
     margin: 0;
     color: var(--muted);
@@ -488,10 +490,11 @@ const initialTrack = radioTracks[0];
     }
 
     .radio-console__art-shell {
-      min-height: auto;
+      height: clamp(210px, 26svh, 260px);
+      min-height: 0;
       border-right: 0;
       border-bottom: 1px solid var(--line);
-      aspect-ratio: 1;
+      aspect-ratio: auto;
     }
   }
 

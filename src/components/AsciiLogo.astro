@@ -6,7 +6,7 @@ const logoText = String.raw`    ___ ____          __             __
 /_/_/_/  \___/____/\__/\___/\__,_/_/`;
 ---
 
-<div class="ascii-stage" data-ascii-stage data-colour-mode="default">
+<div class="ascii-stage" data-ascii-stage data-colour-mode="bisexual">
   <div class="ascii-stage__status" aria-hidden="true">
     <span>LIFESTEAL // HOME</span>
     <span>FOUNDED 2021</span>
@@ -32,7 +32,7 @@ const logoText = String.raw`    ___ ____          __             __
           data-terminal-input
           type="text"
           inputmode="text"
-          maxlength="24"
+          maxlength="160"
           autocomplete="off"
           autocapitalize="characters"
           spellcheck="false"
@@ -41,7 +41,7 @@ const logoText = String.raw`    ___ ____          __             __
         />
       </span>
       <span id="ascii-terminal-hint" class="visually-hidden"
-        >Enter a colour name or a page name, then press Enter.</span
+        >Enter one or more colour names, or a page name, then press Enter.</span
       >
     </form>
   </div>
@@ -57,12 +57,10 @@ const logoText = String.raw`    ___ ____          __             __
   type RainStream = {
     ambient: boolean;
     colorOffset: number;
-    delayUntil: number;
     glyphs: string[];
     headY: number;
     length: number;
     nextGlyphAt: number;
-    originY: number;
     spacing: number;
     speed: number;
     x: number;
@@ -86,103 +84,16 @@ const logoText = String.raw`    ___ ____          __             __
     const typingDuration = 5000;
     const typingTick = 72;
     const glyphs = [
-      'ア',
-      'イ',
-      'ウ',
-      'エ',
-      'オ',
-      'カ',
-      'キ',
-      'ク',
-      'ケ',
-      'コ',
-      'サ',
-      'シ',
-      'ス',
-      'セ',
-      'ソ',
-      'タ',
-      'チ',
-      'ツ',
-      'テ',
-      'ト',
-      'ナ',
-      'ニ',
-      'ヌ',
-      'ネ',
-      'ノ',
-      'ハ',
-      'ヒ',
-      'フ',
-      'ヘ',
-      'ホ',
-      'マ',
-      'ミ',
-      'ム',
-      'メ',
-      'モ',
-      'ヤ',
-      'ユ',
-      'ヨ',
-      'ラ',
-      'リ',
-      'ル',
-      'レ',
-      'ロ',
-      'ワ',
-      'ヲ',
-      'ン',
-      'あ',
-      'い',
-      'う',
-      'え',
-      'お',
-      'か',
-      'き',
-      'く',
-      'け',
-      'こ',
-      'さ',
-      'し',
-      'す',
-      'せ',
-      'そ',
-      'た',
-      'ち',
-      'つ',
-      'て',
-      'と',
-      'な',
-      'に',
-      'ぬ',
-      'ね',
-      'の',
-      'は',
-      'ひ',
-      'ふ',
-      'へ',
-      'ほ',
-      'ま',
-      'み',
-      'む',
-      'め',
-      'も',
-      'や',
-      'ゆ',
-      'よ',
-      'ら',
-      'り',
-      'る',
-      'れ',
-      'ろ',
-      'わ',
-      'を',
-      'ん',
-      '0',
-      '1',
-      ':',
-      '+',
-      '*',
+      ...'0123456789',
+      ...'!@#$%^&*+-=<>?/\\|[]{}:;~_',
+      ...'アカサタナハマヤラワイキシチニヒミリヰウクスツヌフムユルヱエケセテネヘメレヲオコソトノホモヨロン',
+      ...'あかさたなはまやらわいきしちにひみりうくすつぬふむゆるえけせてねへめれをおこそとのほもよろん',
+      ...'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω',
+      ...'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯабвгдежзиклмнопрстуфхцчшщэюя',
+      ...'אבגדהוזחטיכלמנסעפצקרשת',
+      ...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي',
+      ...'가나다라마바사아자차카타파하',
+      ...'अआइईउऊकखगघचछजझटठडढतथदधपफबभमयरलवशषसह',
     ];
     const fullText = source.textContent ?? '';
     const origins: RainOrigin[] = [];
@@ -209,6 +120,8 @@ const logoText = String.raw`    ___ ____          __             __
     let visible = true;
     let activeMode = applyStoredTheme();
     let logoMaskFont = '';
+    let nextAmbientSpawnAt = performance.now() + 180 + Math.random() * 520;
+    let nextLogoSpawnAt = Number.POSITIVE_INFINITY;
 
     const randomGlyph = () => glyphs[Math.floor(Math.random() * glyphs.length)] ?? 'ア';
 
@@ -220,45 +133,56 @@ const logoText = String.raw`    ___ ____          __             __
 
     const createGlyphTrail = (length: number) => Array.from({ length }, () => randomGlyph());
 
-    const resetLogoStream = (stream: RainStream, time: number, initial = false) => {
+    const createLogoStream = (time: number): RainStream | undefined => {
       const origin = origins[Math.floor(Math.random() * origins.length)];
-      if (!origin) return;
-      stream.ambient = false;
-      stream.x = origin.x;
-      stream.originY = origin.y + 1;
-      stream.headY = stream.originY;
-      stream.speed = 38 + Math.random() * 54;
-      stream.spacing = 11 + Math.random() * 4;
-      stream.length = 5 + Math.floor(Math.random() * 8);
-      stream.glyphs = createGlyphTrail(stream.length);
-      stream.nextGlyphAt = time + 60 + Math.random() * 130;
-      stream.delayUntil = initial ? Number.POSITIVE_INFINITY : time + 280 + Math.random() * 1500;
-      stream.colorOffset = Math.floor(Math.random() * activeMode.rain.length);
+      if (!origin) return undefined;
+      const length = 5 + Math.floor(Math.random() * 12);
+      return {
+        ambient: false,
+        x: origin.x,
+        headY: origin.y + 1,
+        speed: 42 + Math.pow(Math.random(), 0.7) * 112,
+        spacing: 10 + Math.random() * 6,
+        length,
+        glyphs: createGlyphTrail(length),
+        nextGlyphAt: time + 55 + Math.random() * 185,
+        colorOffset: Math.floor(Math.random() * activeMode.rain.length),
+      };
     };
 
-    const resetAmbientStream = (stream: RainStream, time: number, initial = false, order = 0) => {
-      const grid = 13;
-      stream.ambient = true;
-      stream.x = Math.round((Math.random() * width) / grid) * grid;
-      stream.speed = 20 + Math.random() * 34;
-      stream.spacing = 13 + Math.random() * 4;
-      stream.length = 8 + Math.floor(Math.random() * 10);
-      stream.originY = -stream.length * stream.spacing - 12;
-      stream.headY = -8 - Math.random() * 36;
-      stream.glyphs = createGlyphTrail(stream.length);
-      stream.nextGlyphAt = time + 120 + Math.random() * 260;
-      stream.delayUntil = initial
-        ? time + 180 + order * (mobileViewport.matches ? 240 : 180) + Math.random() * 520
-        : time + 240 + Math.random() * 1400;
-      stream.colorOffset = Math.floor(Math.random() * activeMode.rain.length);
+    const createAmbientStream = (time: number): RainStream => {
+      const grid = mobileViewport.matches ? 15 : 13;
+      const length = 19 + Math.floor(Math.random() * 25);
+      const spacing = 12 + Math.random() * 7;
+      return {
+        ambient: true,
+        x: Math.round((Math.random() * width) / grid) * grid,
+        headY: -spacing,
+        speed: 9 + Math.pow(Math.random(), 0.72) * 31,
+        spacing,
+        length,
+        glyphs: createGlyphTrail(length),
+        nextGlyphAt: time + 100 + Math.random() * 360,
+        colorOffset: Math.floor(Math.random() * activeMode.rain.length),
+      };
     };
 
-    const primeLogoStreams = (time: number) => {
-      for (let index = 0; index < logoStreams.length; index += 1) {
-        const stream = logoStreams[index];
-        if (!stream) continue;
-        resetLogoStream(stream, time);
-        stream.delayUntil = time + 160 + index * 86 + Math.random() * 420;
+    const scheduleRain = (time: number) => {
+      if (time >= nextAmbientSpawnAt) {
+        const ambientLimit = mobileViewport.matches ? 18 : 38;
+        if (ambientStreams.length < ambientLimit) {
+          ambientStreams.push(createAmbientStream(time));
+        }
+        nextAmbientSpawnAt = time + 170 + Math.random() * 760;
+      }
+
+      if (typingComplete && time >= nextLogoSpawnAt) {
+        const logoLimit = mobileViewport.matches ? 16 : 32;
+        if (logoStreams.length < logoLimit) {
+          const stream = createLogoStream(time);
+          if (stream) logoStreams.push(stream);
+        }
+        nextLogoSpawnAt = time + 105 + Math.random() * 620;
       }
     };
 
@@ -306,21 +230,11 @@ const logoText = String.raw`    ___ ____          __             __
         }
       }
 
-      logoStreams.length = 0;
-      ambientStreams.length = 0;
-      const emittedCount = Math.min(origins.length, mobileViewport.matches ? 15 : 34);
-      const ambientCount = mobileViewport.matches ? 15 : 32;
-      const now = performance.now();
-      for (let index = 0; index < emittedCount; index += 1) {
-        const stream = {} as RainStream;
-        resetLogoStream(stream, now, true);
-        logoStreams.push(stream);
+      for (let index = ambientStreams.length - 1; index >= 0; index -= 1) {
+        if ((ambientStreams[index]?.x ?? 0) > width + 20) ambientStreams.splice(index, 1);
       }
-      if (typingComplete) primeLogoStreams(now);
-      for (let index = 0; index < ambientCount; index += 1) {
-        const stream = {} as RainStream;
-        resetAmbientStream(stream, now, true, index);
-        ambientStreams.push(stream);
+      for (let index = logoStreams.length - 1; index >= 0; index -= 1) {
+        if ((logoStreams[index]?.x ?? 0) > width + 20) logoStreams.splice(index, 1);
       }
     };
 
@@ -346,12 +260,7 @@ const logoText = String.raw`    ___ ____          __             __
     };
 
     const drawStream = (stream: RainStream, time: number) => {
-      if (
-        !context ||
-        time < stream.delayUntil ||
-        stream.headY < 0 ||
-        stream.headY - stream.length * stream.spacing > height
-      ) {
+      if (!context || stream.headY < 0 || stream.headY - stream.length * stream.spacing > height) {
         return false;
       }
       updateGlyphs(stream, time);
@@ -362,7 +271,7 @@ const logoText = String.raw`    ___ ____          __             __
 
       for (let index = stream.length - 1; index >= 0; index -= 1) {
         const y = stream.headY - index * stream.spacing;
-        if (y < 0 || y < stream.originY || y > height + stream.spacing) continue;
+        if (y < 0 || y > height + stream.spacing) continue;
         const strength = 1 - index / stream.length;
         const color =
           activeMode.rain[(stream.colorOffset + index) % activeMode.rain.length] ??
@@ -419,7 +328,7 @@ const logoText = String.raw`    ___ ____          __             __
         typingComplete = true;
         logo.dataset.typing = 'false';
         stage.dataset.terminalReady = 'true';
-        primeLogoStreams(time);
+        nextLogoSpawnAt = time + 160 + Math.random() * 420;
         if (desktopTerminal.matches && terminalInput) {
           terminalInput.disabled = false;
           window.setTimeout(() => terminalInput.focus({ preventScroll: true }), 120);
@@ -438,20 +347,27 @@ const logoText = String.raw`    ___ ____          __             __
       lastTime = time;
       context.clearRect(0, 0, width, height);
       let drewRain = false;
+      scheduleRain(time);
 
-      for (const stream of ambientStreams) {
-        if (time >= stream.delayUntil) stream.headY += stream.speed * elapsed;
+      for (let index = ambientStreams.length - 1; index >= 0; index -= 1) {
+        const stream = ambientStreams[index];
+        if (!stream) continue;
+        stream.headY += stream.speed * elapsed;
         if (stream.headY - stream.length * stream.spacing > height + 20) {
-          resetAmbientStream(stream, time);
+          ambientStreams.splice(index, 1);
+          continue;
         }
         drewRain = drawStream(stream, time) || drewRain;
       }
 
       if (typingComplete) {
-        for (const stream of logoStreams) {
-          if (time >= stream.delayUntil) stream.headY += stream.speed * elapsed;
+        for (let index = logoStreams.length - 1; index >= 0; index -= 1) {
+          const stream = logoStreams[index];
+          if (!stream) continue;
+          stream.headY += stream.speed * elapsed;
           if (stream.headY - stream.length * stream.spacing > height + 20) {
-            resetLogoStream(stream, time);
+            logoStreams.splice(index, 1);
+            continue;
           }
           drewRain = drawStream(stream, time) || drewRain;
         }
@@ -490,6 +406,7 @@ const logoText = String.raw`    ___ ____          __             __
         stage.dataset.terminalReady === 'true' &&
         !(event.target instanceof HTMLAnchorElement)
       ) {
+        if (event.target !== terminalInput) event.preventDefault();
         terminalInput?.focus({ preventScroll: true });
       }
     });

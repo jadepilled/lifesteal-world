@@ -11,10 +11,15 @@ test.describe('site shell', () => {
       page,
     }) => {
       await page.goto(siteUrl(route));
-      await expect(page.locator('.wordmark')).toHaveText('lifesteal');
+      if (route === '/store/') {
+        await expect(page.locator('.wordmark')).toHaveCount(0);
+      } else {
+        await expect(page.locator('.wordmark')).toHaveText('lifesteal');
+      }
       await expect(page.locator('footer')).toContainText('LIFESTEAL acknowledges');
       await expect(page.locator('.terminal-path')).toHaveCount(0);
-      await expect(page.locator('.page-heading p')).toHaveCount(0);
+      await expect(page.locator('.page-heading')).toHaveCount(0);
+      await expect(page.locator('.site-header__status')).toHaveCount(0);
       const results = await new AxeBuilder({ page }).analyze();
       expect(
         results.violations.filter((violation) =>
@@ -147,6 +152,43 @@ test('terminal text aligns with its prompt and persisted flag themes clip throug
   expect(accent).toBe('#dd0000');
 });
 
+test('custom terminal gradients persist without reverting to red between pages', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The command terminal is intentionally desktop-only.');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(siteUrl('/'));
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'bisexual');
+
+  const stage = page.locator('[data-ascii-stage]');
+  const terminal = page.locator('[data-terminal-input]');
+  await stage.click({ position: { x: 30, y: 30 } });
+  await expect(terminal).toBeFocused();
+  await terminal.fill('RED RED BLUE GREEN RED');
+  await terminal.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'custom-gradient');
+  await expect(stage).toHaveAttribute('data-colour-mode', 'custom-gradient');
+
+  const stored = await page.evaluate(() => ({
+    command: localStorage.getItem('lifesteal.theme'),
+    accent: localStorage.getItem('lifesteal.accent'),
+    gradient: getComputedStyle(document.documentElement)
+      .getPropertyValue('--site-logo-background')
+      .trim(),
+  }));
+  expect(stored.command).toBe('RED RED BLUE GREEN RED');
+  expect(stored.accent).toBe('#ff304f');
+  expect(stored.gradient.match(/#ff304f/g)?.length).toBe(3);
+
+  await page.goto(siteUrl('/about/'));
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'custom-gradient');
+  const persistedAccent = await page
+    .locator('html')
+    .evaluate((element) => getComputedStyle(element).getPropertyValue('--accent').trim());
+  expect(persistedAccent).toBe('#ff304f');
+});
+
 test('home navigation shows the newsletter gate only once per site visit', async ({
   page,
   isMobile,
@@ -194,13 +236,69 @@ test('newsletter signup posts an identifiable home-gate record before continuing
 
 test('artist browser is keyboard-operable and deep-linkable', async ({ page }) => {
   await page.goto(siteUrl('/artists/#hazelmere'));
-  await expect(page.getByRole('heading', { name: 'HAZELMERE' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'HAZELMERE' })).toHaveText('HAZELMERE');
+  await expect(page.locator('#hazelmere ascii-title')).toBeVisible();
   await page.getByRole('button', { name: 'Show starstrike' }).click();
-  await expect(page.getByRole('heading', { name: 'starstrike' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'starstrike' })).toHaveText('starstrike');
+  await expect(page.locator('#starstrike ascii-title')).toBeVisible();
   await expect(page).toHaveURL(/#starstrike$/);
   await page.locator('[data-gallery]').press('ArrowLeft');
-  await expect(page.getByRole('heading', { name: 'HAZELMERE' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'HAZELMERE' })).toHaveText('HAZELMERE');
   await expect(page.locator('[data-gallery-position]')).toHaveText('01 / 02');
+});
+
+test('mobile artist details are split into compact Info and Links disclosures', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'This disclosure layout is mobile-specific.');
+  await page.goto(siteUrl('/artists/#hazelmere'));
+  const article = page.locator('#hazelmere');
+  const infoButton = article.getByRole('button', { name: 'INFO' });
+  const linksButton = article.getByRole('button', { name: 'LINKS' });
+  const infoPanel = article.locator('[data-artist-panel="info"]');
+  const linksPanel = article.locator('[data-artist-panel="links"]');
+
+  await expect(infoButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(linksButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(infoPanel).toBeHidden();
+  await expect(linksPanel).toBeHidden();
+
+  await infoButton.click();
+  await expect(infoButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(infoPanel).toBeVisible();
+  await expect(linksPanel).toBeHidden();
+
+  await linksButton.click();
+  await expect(infoButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(linksButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(infoPanel).toBeHidden();
+  await expect(linksPanel).toBeVisible();
+});
+
+test('mobile shell stays compact and collapses the footer', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'This is the compact mobile shell contract.');
+  await page.setViewportSize({ width: 440, height: 956 });
+  for (const route of ['/', '/artists/', '/releases/', '/radio/', '/about/']) {
+    await page.goto(siteUrl(route));
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      headerHeight: document.querySelector('header')?.getBoundingClientRect().height ?? 0,
+    }));
+    expect(
+      dimensions.scrollWidth,
+      `${route} should have no horizontal overflow`,
+    ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    expect(
+      dimensions.headerHeight,
+      `${route} should use the thin mobile header`,
+    ).toBeLessThanOrEqual(50);
+    const footerDetails = page.locator('.site-footer__details');
+    await expect(footerDetails).not.toHaveAttribute('open', '');
+    await footerDetails.locator('summary').click({ force: true });
+    await expect(footerDetails).toHaveAttribute('open', '');
+  }
 });
 
 test('release and store records are canonical and intentionally pending', async ({ page }) => {

@@ -14,22 +14,38 @@ const { showRule = true } = Astro.props;
   <meta itemprop="address" content="Naarm, Australia" />
 
   {showRule && <div class="site-footer__rule" aria-hidden="true" />}
-  <div class="site-footer__content">
-    <p>
-      LIFESTEAL acknowledges the rightful owners and traditional caretakers of all land upon which
-      it conducts operations.
-    </p>
-    <p>
-      We recognise and pay respects to the Wurundjeri Woi Wurrung and Bunurong people of the Kulin
-      Nation.
-      <img
-        class="acknowledgement-flag"
-        src={withBase('/assets/brand/aboriginal-flag.svg')}
-        alt="Australian Aboriginal Flag"
-        width="30"
-        height="20"
-      />
-    </p>
-    <p class="site-footer__copyright">All site-specific content copyright (c) LIFESTEAL 2026</p>
-  </div>
+  <details class="site-footer__details">
+    <summary>ACKNOWLEDGEMENT / COPYRIGHT <span aria-hidden="true">[+]</span></summary>
+    <div class="site-footer__content">
+      <p>
+        LIFESTEAL acknowledges the rightful owners and traditional caretakers of all land upon which
+        it conducts operations.
+      </p>
+      <p>
+        We recognise and pay respects to the Wurundjeri Woi Wurrung and Bunurong people of the Kulin
+        Nation.
+        <img
+          class="acknowledgement-flag"
+          src={withBase('/assets/brand/aboriginal-flag.svg')}
+          alt="Australian Aboriginal Flag"
+          width="30"
+          height="20"
+        />
+      </p>
+      <p class="site-footer__copyright">All site-specific content copyright (c) LIFESTEAL 2026</p>
+    </div>
+  </details>
 </footer>
+
+<script>
+  const footerDetails = document.querySelector<HTMLDetailsElement>('.site-footer__details');
+  const desktopFooter = window.matchMedia('(min-width: 901px)');
+  const syncFooter = () => {
+    if (footerDetails) footerDetails.open = desktopFooter.matches;
+  };
+  syncFooter();
+  desktopFooter.addEventListener('change', syncFooter);
+  document.addEventListener('astro:before-swap', () => {
+    desktopFooter.removeEventListener('change', syncFooter);
+  });
+</script>

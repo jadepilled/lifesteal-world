@@ -1,5 +1,4 @@
 ---
-import PageHeading from '../components/PageHeading.astro';
 import ReleaseCard from '../components/ReleaseCard.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { releases } from '../lib/content';
@@ -21,8 +20,6 @@ const galleryStyle = initialPalette
   description="Releases and forthcoming transmissions from LIFESTEAL artists."
   page="releases"
 >
-  <PageHeading title="releases" status={`${releases.length.toString().padStart(2, '0')} LOADED`} />
-
   <section
     class="snap-gallery release-gallery panel"
     data-gallery
@@ -44,6 +41,7 @@ const galleryStyle = initialPalette
             data-gallery-accent={release.palette.accent}
             data-gallery-glow={release.palette.glow}
             aria-label={`${index + 1} of ${releases.length}: ${release.title}`}
+            tabindex="0"
           >
             <ReleaseCard release={release} index={index} />
           </div>
@@ -179,7 +177,8 @@ const galleryStyle = initialPalette
 
   @media (max-width: 900px) {
     .release-gallery {
-      min-height: min(820px, calc(100svh - 190px));
+      height: calc(100svh - var(--header-height) - 70px);
+      min-height: 0;
       flex: none;
     }
 
@@ -198,12 +197,6 @@ const galleryStyle = initialPalette
 
     .snap-gallery__controls {
       grid-template-columns: 1fr auto;
-    }
-  }
-
-  @media (max-width: 540px) {
-    .release-gallery {
-      min-height: 760px;
     }
   }
 </style>

@@ -1,5 +1,5 @@
 ---
-import PageHeading from '../components/PageHeading.astro';
+import AsciiTitle from '../components/AsciiTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { artists } from '../lib/content';
 import { withBase } from '../lib/base';
@@ -21,8 +21,6 @@ const galleryStyle = initialPalette
   description="Meet the artists on LIFESTEAL: HAZELMERE and starstrike."
   page="artists"
 >
-  <PageHeading title="artists" status={`${artists.length.toString().padStart(2, '0')} RECORDS`} />
-
   <section
     class="snap-gallery artist-gallery panel"
     data-gallery
@@ -72,37 +70,70 @@ const galleryStyle = initialPalette
 
               <div class="artist-slide__copy">
                 <span class="eyebrow">ARTIST / {String(index + 1).padStart(2, '0')}</span>
-                <h2>{artist.displayName}</h2>
-                <dl class="artist-meta">
-                  <div>
-                    <>
-                      <dt>ACTIVE</dt>
-                      <dd>{artist.activeYears}</dd>
-                    </>
-                  </div>
-                  <div>
-                    <>
-                      <dt>LOCATION</dt>
-                      <dd>{artist.location}</dd>
-                    </>
-                  </div>
-                  <div>
-                    <>
-                      <dt>GENRE</dt>
-                      <dd>{artist.genres.join(' / ')}</dd>
-                    </>
-                  </div>
-                </dl>
-                <p class="artist-biography">{artist.biography}</p>
-                <ul class="artist-links" aria-label={`${artist.displayName} links`}>
-                  {artist.links.map((link) => (
-                    <li>
-                      <a class="button-link" href={link.url} target="_blank" rel="noreferrer">
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <AsciiTitle text={artist.displayName} accent="var(--artist-accent)" />
+                <div
+                  class="artist-mobile-tabs"
+                  aria-label={`${artist.displayName} record sections`}
+                >
+                  <button
+                    type="button"
+                    data-artist-panel-button="info"
+                    aria-controls={`${artist.slug}-info`}
+                    aria-expanded="false"
+                  >
+                    INFO
+                  </button>
+                  <button
+                    type="button"
+                    data-artist-panel-button="links"
+                    aria-controls={`${artist.slug}-links`}
+                    aria-expanded="false"
+                  >
+                    LINKS
+                  </button>
+                </div>
+                <div
+                  class="artist-slide__panel artist-slide__panel--info"
+                  id={`${artist.slug}-info`}
+                  data-artist-panel="info"
+                >
+                  <dl class="artist-meta">
+                    <div>
+                      <>
+                        <dt>ACTIVE</dt>
+                        <dd>{artist.activeYears}</dd>
+                      </>
+                    </div>
+                    <div>
+                      <>
+                        <dt>LOCATION</dt>
+                        <dd>{artist.location}</dd>
+                      </>
+                    </div>
+                    <div>
+                      <>
+                        <dt>GENRE</dt>
+                        <dd>{artist.genres.join(' / ')}</dd>
+                      </>
+                    </div>
+                  </dl>
+                  <p class="artist-biography">{artist.biography}</p>
+                </div>
+                <div
+                  class="artist-slide__panel artist-slide__panel--links"
+                  id={`${artist.slug}-links`}
+                  data-artist-panel="links"
+                >
+                  <ul class="artist-links" aria-label={`${artist.displayName} links`}>
+                    {artist.links.map((link) => (
+                      <li>
+                        <a class="button-link" href={link.url} target="_blank" rel="noreferrer">
+                          {link.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </article>
           );
@@ -138,6 +169,23 @@ const galleryStyle = initialPalette
   import { setupSnapGallery } from '../lib/snap-gallery';
 
   document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
+  document.querySelectorAll<HTMLElement>('.artist-slide').forEach((slide) => {
+    const buttons = [...slide.querySelectorAll<HTMLButtonElement>('[data-artist-panel-button]')];
+    const panels = [...slide.querySelectorAll<HTMLElement>('[data-artist-panel]')];
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const requested = button.dataset.artistPanelButton;
+        const willOpen = button.getAttribute('aria-expanded') !== 'true';
+        buttons.forEach((candidate) => candidate.setAttribute('aria-expanded', 'false'));
+        panels.forEach((panel) => delete panel.dataset.open);
+        if (willOpen && requested) {
+          button.setAttribute('aria-expanded', 'true');
+          const panel = panels.find((candidate) => candidate.dataset.artistPanel === requested);
+          if (panel) panel.dataset.open = 'true';
+        }
+      });
+    });
+  });
 </script>
 
 <style>
@@ -255,21 +303,15 @@ const galleryStyle = initialPalette
     color: var(--artist-accent);
   }
 
-  .artist-slide h2 {
-    margin: 5px 0 clamp(15px, 2.2vh, 27px);
-    font-family: var(--display);
-    font-size: clamp(58px, 8.2vh, 106px);
-    font-weight: 900;
-    line-height: 0.8;
-    letter-spacing: -0.05em;
-    text-shadow: 0 0 22px color-mix(in srgb, var(--artist-glow), transparent 65%);
-  }
-
   .artist-meta {
     display: grid;
     width: 100%;
     margin: 0 0 clamp(14px, 2vh, 24px);
     gap: 6px;
+  }
+
+  .artist-mobile-tabs {
+    display: none;
   }
 
   .artist-meta div {
@@ -363,13 +405,14 @@ const galleryStyle = initialPalette
 
   @media (max-width: 900px) {
     .artist-gallery {
-      min-height: min(760px, calc(100svh - 190px));
+      height: calc(100svh - var(--header-height) - 70px);
+      min-height: 0;
       flex: none;
     }
 
     .artist-slide {
       grid-template-columns: 1fr;
-      grid-template-rows: minmax(260px, 48%) 1fr;
+      grid-template-rows: minmax(260px, 48%) minmax(0, 1fr);
     }
 
     .artist-slide__image-wrap {
@@ -379,12 +422,68 @@ const galleryStyle = initialPalette
 
     .artist-slide__copy {
       justify-content: flex-start;
-      padding: 28px 22px 36px;
+      padding: 24px 22px 30px;
       overflow-y: auto;
     }
 
-    .artist-slide h2 {
-      font-size: clamp(54px, 17vw, 96px);
+    .artist-mobile-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .artist-mobile-tabs button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid color-mix(in srgb, var(--artist-accent), transparent 50%);
+      background: color-mix(in srgb, var(--artist-surface), transparent 12%);
+      color: var(--artist-foreground);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+
+    .artist-mobile-tabs button::before {
+      color: var(--artist-accent);
+      content: '>';
+    }
+
+    .artist-mobile-tabs button::after {
+      color: var(--artist-accent);
+      content: '[+]';
+    }
+
+    .artist-mobile-tabs button[aria-expanded='true'] {
+      background: color-mix(in srgb, var(--artist-accent), transparent 84%);
+      box-shadow: inset 0 0 18px color-mix(in srgb, var(--artist-glow), transparent 82%);
+    }
+
+    .artist-mobile-tabs button[aria-expanded='true']::after {
+      content: '[-]';
+    }
+
+    .artist-slide__panel {
+      display: none;
+      padding-top: 16px;
+    }
+
+    .artist-slide__panel[data-open='true'] {
+      display: block;
+    }
+
+    .artist-meta {
+      margin-bottom: 14px;
+    }
+
+    .artist-biography {
+      margin-bottom: 0;
+    }
+
+    .artist-links {
+      margin-top: 0;
     }
 
     .snap-gallery__hint {
@@ -397,10 +496,6 @@ const galleryStyle = initialPalette
   }
 
   @media (max-width: 540px) {
-    .artist-gallery {
-      min-height: 720px;
-    }
-
     .artist-meta div {
       grid-template-columns: 72px 1fr;
     }

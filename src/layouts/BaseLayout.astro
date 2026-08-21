@@ -53,12 +53,22 @@ const socialImage = new URL(withBase(image), Astro.site);
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
+    <script is:inline>
+      try {
+        const accent = localStorage.getItem('lifesteal.accent');
+        if (accent && /^#[\da-f]{6}$/i.test(accent)) {
+          document.documentElement.style.setProperty('--accent', accent);
+        }
+      } catch {
+        // The BI fallback remains in place when storage is unavailable.
+      }
+    </script>
     <title>{pageTitle}</title>
   </head>
   <body data-page={page}>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="screen-texture" aria-hidden="true"></div>
-    <Header />
+    {page !== 'store' && <Header />}
     <main id="main-content" class:list={['site-main', mainClass]}>
       <slot />
     </main>
