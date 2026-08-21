@@ -48,6 +48,55 @@ test('landing presents the ASCII signal and respects reduced motion', async ({ p
   await expect(page.getByText('EOF', { exact: true })).toHaveCount(0);
 });
 
+test('landing types for five seconds, then exposes a silent colour terminal', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The colour terminal is intentionally desktop-only.');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(siteUrl('/'));
+  const logo = page.locator('[data-ascii-logo]');
+  const terminal = page.locator('[data-terminal-input]');
+  await page.waitForTimeout(900);
+  await expect(logo).toHaveAttribute('data-typing', 'true');
+  await expect(terminal).not.toBeVisible();
+  await expect(logo).toHaveAttribute('data-typing', 'false', { timeout: 6_000 });
+  await expect(terminal).toBeVisible();
+
+  for (const [command, mode] of [
+    ['RED', 'red'],
+    ['GAY', 'gay'],
+    ['LESBIAN', 'lesbian'],
+    ['PANSEXUAL', 'pansexual'],
+    ['BISEXUAL', 'bisexual'],
+    ['TRANSGENDER', 'transgender'],
+    ['INTERSEX', 'intersex'],
+    ['LGBT', 'rainbow'],
+    ['INDIGENOUS', 'aboriginal'],
+  ]) {
+    await terminal.fill(command);
+    await terminal.press('Enter');
+    await expect(page.locator('[data-ascii-stage]')).toHaveAttribute('data-colour-mode', mode);
+    await expect(terminal).toHaveValue('');
+  }
+});
+
+test('header prism plays only when the wordmark is hovered', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(siteUrl('/about/'));
+  const wordmark = page.locator('.wordmark');
+  const animationName = () =>
+    wordmark.evaluate((element) => getComputedStyle(element, '::after').animationName);
+
+  expect(await animationName()).toBe('none');
+  await wordmark.hover();
+  expect(await animationName()).toBe('wordmark-prism');
+  await page.mouse.move(900, 500);
+  expect(await animationName()).toBe('none');
+  await wordmark.hover();
+  expect(await animationName()).toBe('wordmark-prism');
+});
+
 test('artist browser is keyboard-operable and deep-linkable', async ({ page }) => {
   await page.goto(siteUrl('/artists/#hazelmere'));
   await expect(page.getByRole('heading', { name: 'HAZELMERE' })).toBeVisible();

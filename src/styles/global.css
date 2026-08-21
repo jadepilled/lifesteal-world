@@ -186,22 +186,22 @@ h3 {
   background: linear-gradient(
     108deg,
     var(--white) 0%,
-    var(--white) 40%,
-    var(--cyan) 46%,
-    #ffffff 49%,
-    var(--magenta) 52%,
-    #ffd16f 55%,
-    var(--white) 61%,
+    var(--white) 42%,
+    #37eaff 46.5%,
+    #ffffff 49.3%,
+    #ff3bd7 52%,
+    #ffe36e 54.7%,
+    var(--white) 59%,
     var(--white) 100%
   );
-  background-position: 115% 50%;
-  background-size: 320% 100%;
+  background-position: 125% 50%;
+  background-size: 360% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   text-shadow: none;
   -webkit-text-fill-color: transparent;
-  animation: prism-sweep 8.6s cubic-bezier(0.22, 0.75, 0.24, 1) infinite;
+  animation: prism-sweep 11.5s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
 }
 
 .wordmark.prism-text {
@@ -218,28 +218,33 @@ h3 {
   background: linear-gradient(
     108deg,
     transparent 0%,
-    transparent 38%,
-    var(--cyan) 45%,
-    #ffffff 49%,
-    var(--magenta) 53%,
-    #ffd16f 57%,
-    transparent 64%,
+    transparent 40%,
+    #37eaff 45.5%,
+    #ffffff 49.2%,
+    #ff3bd7 52.8%,
+    #ffe36e 56%,
+    transparent 62%,
     transparent 100%
   );
-  background-position: 115% 50%;
-  background-size: 320% 100%;
+  background-position: 125% 50%;
+  background-size: 360% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   content: attr(data-text);
-  text-shadow: none;
+  filter: drop-shadow(0 0 7px rgba(55, 234, 255, 0.72))
+    drop-shadow(0 0 11px rgba(255, 59, 215, 0.5));
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
   -webkit-text-fill-color: transparent;
-  animation: prism-sweep 8.6s cubic-bezier(0.22, 0.75, 0.24, 1) infinite;
+  animation: none;
 }
 
-.wordmark.prism-text:hover,
-.wordmark.prism-text:hover::after {
+.wordmark.prism-text:hover {
   text-shadow: none;
+}
+
+.wordmark.prism-text:hover::after {
+  animation: wordmark-prism 2.15s cubic-bezier(0.18, 0.75, 0.2, 1) 1;
 }
 
 .site-nav {
@@ -445,6 +450,8 @@ h3 {
 }
 
 .ascii-stage {
+  --terminal-gradient: linear-gradient(90deg, var(--white), var(--white));
+  --terminal-primary: var(--red);
   position: relative;
   display: grid;
   min-height: min(70svh, 820px);
@@ -453,7 +460,12 @@ h3 {
   background:
     linear-gradient(90deg, transparent 49.8%, rgba(255, 255, 255, 0.045) 50%, transparent 50.2%),
     linear-gradient(transparent 49.8%, rgba(255, 255, 255, 0.045) 50%, transparent 50.2%),
-    radial-gradient(circle at 50% 40%, rgba(255, 48, 79, 0.11), transparent 42%), #020202;
+    radial-gradient(
+      circle at 50% 40%,
+      color-mix(in srgb, var(--terminal-primary) 13%, transparent),
+      transparent 42%
+    ),
+    #020202;
   place-items: center;
 }
 
@@ -463,7 +475,7 @@ h3 {
   z-index: 2;
   width: 58px;
   height: 18px;
-  border-color: var(--red);
+  border-color: var(--terminal-primary);
   content: '';
   pointer-events: none;
 }
@@ -495,6 +507,14 @@ h3 {
   letter-spacing: 0.1em;
 }
 
+.ascii-console {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
 .ascii-logo {
   position: relative;
   z-index: 2;
@@ -517,14 +537,22 @@ h3 {
   display: block;
   white-space: pre;
   filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.66))
-    drop-shadow(0 0 18px rgba(255, 48, 79, 0.28));
+    drop-shadow(0 0 18px color-mix(in srgb, var(--terminal-primary) 34%, transparent));
 }
 
 .ascii-logo__output {
-  color: var(--white);
+  background: var(--terminal-gradient);
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.18px rgba(255, 255, 255, 0.24);
 }
 
 .ascii-logo__shimmer {
+  filter: brightness(1.35) drop-shadow(0 0 8px rgba(55, 234, 255, 0.72))
+    drop-shadow(0 0 14px rgba(255, 59, 215, 0.5));
   pointer-events: none;
 }
 
@@ -533,11 +561,79 @@ h3 {
 }
 
 .ascii-logo[data-typing='true'] .ascii-logo__output::after {
-  color: var(--red);
+  color: var(--terminal-primary);
   content: '▌';
-  text-shadow: 0 0 9px var(--red);
-  -webkit-text-fill-color: var(--red);
+  text-shadow: 0 0 9px var(--terminal-primary);
+  -webkit-text-fill-color: var(--terminal-primary);
   animation: cursor-blink 360ms steps(2, end) infinite;
+}
+
+.ascii-terminal {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+  margin-top: 2.2em;
+  opacity: 0;
+  color: var(--terminal-primary);
+  font-family: var(--mono);
+  font-size: clamp(9px, 0.92vw, 14px);
+  line-height: 1.2;
+  pointer-events: none;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--terminal-primary) 72%, transparent);
+  transform: translateY(-0.45em);
+  visibility: hidden;
+  transition:
+    opacity 150ms linear,
+    transform 220ms ease-out;
+}
+
+.ascii-stage[data-terminal-ready='true'] .ascii-terminal {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.ascii-terminal__prompt {
+  flex: none;
+  color: inherit;
+  user-select: none;
+}
+
+.ascii-terminal__entry {
+  --cursor-position: 0;
+  position: relative;
+  display: inline-block;
+  width: 24ch;
+  height: 1.2em;
+}
+
+.ascii-terminal__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  caret-color: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-transform: uppercase;
+  text-shadow: inherit;
+}
+
+.ascii-terminal__cursor {
+  position: absolute;
+  top: 0.08em;
+  left: calc(var(--cursor-position) * 1ch);
+  width: 0.67ch;
+  height: 1.05em;
+  background: var(--terminal-primary);
+  box-shadow: 0 0 9px var(--terminal-primary);
+  pointer-events: none;
+  animation: cursor-blink 720ms steps(2, end) infinite;
 }
 
 .ascii-stage__canvas {
@@ -565,12 +661,21 @@ h3 {
 
 @keyframes prism-sweep {
   0%,
-  68% {
-    background-position: 115% 50%;
+  62% {
+    background-position: 125% 50%;
   }
-  82%,
+  87%,
   100% {
-    background-position: -15% 50%;
+    background-position: -25% 50%;
+  }
+}
+
+@keyframes wordmark-prism {
+  0% {
+    background-position: 125% 50%;
+  }
+  100% {
+    background-position: -25% 50%;
   }
 }
 
@@ -678,6 +783,10 @@ h3 {
 
   .site-footer__copyright {
     text-align: left;
+  }
+
+  .ascii-terminal {
+    display: none;
   }
 
   .page-heading__line {

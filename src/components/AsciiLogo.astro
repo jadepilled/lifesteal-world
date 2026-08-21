@@ -6,17 +6,42 @@ const logoText = String.raw`    ___ ____          __             __
 /_/_/_/  \___/____/\__/\___/\__,_/_/`;
 ---
 
-<div class="ascii-stage" data-ascii-stage>
+<div class="ascii-stage" data-ascii-stage data-colour-mode="default">
   <div class="ascii-stage__status" aria-hidden="true">
     <span>LIFESTEAL // HOME</span>
     <span>FOUNDED 2021</span>
   </div>
   <canvas class="ascii-stage__canvas" data-drip-canvas aria-hidden="true"></canvas>
-  <pre
-    class="ascii-logo"
-    aria-hidden="true"
-    data-ascii-logo
-    data-typing="true"><span class="ascii-logo__measure" data-ascii-source>{logoText}</span><span class="ascii-logo__output" data-ascii-output /><span class="ascii-logo__shimmer prism-text" data-ascii-shimmer /></pre>
+  <div class="ascii-console">
+    <pre
+      class="ascii-logo"
+      aria-hidden="true"
+      data-ascii-logo
+      data-typing="true"><span class="ascii-logo__measure" data-ascii-source>{logoText}</span><span class="ascii-logo__output" data-ascii-output /><span class="ascii-logo__shimmer prism-text" data-ascii-shimmer /></pre>
+    <form class="ascii-terminal" data-terminal-form autocomplete="off">
+      <label class="visually-hidden" for="ascii-terminal-input">Enter a colour command</label>
+      <span class="ascii-terminal__prompt" aria-hidden="true">C:\LIFESTEAL&gt;</span>
+      <span class="ascii-terminal__entry">
+        <input
+          id="ascii-terminal-input"
+          class="ascii-terminal__input"
+          data-terminal-input
+          type="text"
+          inputmode="text"
+          maxlength="24"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          disabled
+          aria-describedby="ascii-terminal-hint"
+        />
+        <span class="ascii-terminal__cursor" data-terminal-cursor aria-hidden="true"></span>
+      </span>
+      <span id="ascii-terminal-hint" class="visually-hidden"
+        >Enter a colour name and press Enter to recolour the logo.</span
+      >
+    </form>
+  </div>
   <span class="visually-hidden">lifesteal</span>
   <p class="ascii-stage__tagline">INDEPENDENT AUDIO // NAARM</p>
 </div>
@@ -32,6 +57,7 @@ const logoText = String.raw`    ___ ____          __             __
     life: number;
     age: number;
     glyph: string;
+    color: string;
     size: number;
     rotation: number;
     angularVelocity: number;
@@ -45,10 +71,81 @@ const logoText = String.raw`    ___ ____          __             __
   const output = stage?.querySelector<HTMLElement>('[data-ascii-output]');
   const shimmer = stage?.querySelector<HTMLElement>('[data-ascii-shimmer]');
   const canvas = stage?.querySelector<HTMLCanvasElement>('[data-drip-canvas]');
+  const terminalForm = stage?.querySelector<HTMLFormElement>('[data-terminal-form]');
+  const terminalInput = stage?.querySelector<HTMLInputElement>('[data-terminal-input]');
 
   if (stage && logo && source && output && shimmer && canvas) {
     const context = canvas.getContext('2d', { alpha: true });
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const desktopTerminal = window.matchMedia('(min-width: 901px)');
+    const typingDuration = 5000;
+    type ColourMode = {
+      name: string;
+      logo: string[];
+      particles: string[];
+    };
+    const colourModes: Record<string, ColourMode> = {
+      DEFAULT: { name: 'default', logo: ['#f7f7f5'], particles: ['#ff304f'] },
+      WHITE: { name: 'white', logo: ['#ffffff'], particles: ['#ffffff'] },
+      RED: { name: 'red', logo: ['#ff304f'], particles: ['#ff304f', '#ff6b7f'] },
+      BLUE: { name: 'blue', logo: ['#2f7cff'], particles: ['#2f7cff', '#72d7ff'] },
+      GREEN: { name: 'green', logo: ['#2de37b'], particles: ['#2de37b', '#a4ffbf'] },
+      PINK: { name: 'pink', logo: ['#ff4fa7'], particles: ['#ff4fa7', '#ff9bd0'] },
+      PURPLE: { name: 'purple', logo: ['#a855f7'], particles: ['#a855f7', '#d7a6ff'] },
+      ORANGE: { name: 'orange', logo: ['#ff7a1a'], particles: ['#ff7a1a', '#ffc067'] },
+      YELLOW: { name: 'yellow', logo: ['#ffd400'], particles: ['#ffd400', '#fff09a'] },
+      CYAN: { name: 'cyan', logo: ['#24d8ff'], particles: ['#24d8ff', '#b6f6ff'] },
+      MAGENTA: { name: 'magenta', logo: ['#ff2ed1'], particles: ['#ff2ed1', '#ff9aea'] },
+      GAY: {
+        name: 'gay',
+        logo: ['#078d70', '#26ceaa', '#98e8c1', '#ffffff', '#7bade2', '#5049cc', '#3d1a78'],
+        particles: ['#078d70', '#26ceaa', '#98e8c1', '#ffffff', '#7bade2', '#5049cc', '#3d1a78'],
+      },
+      LESBIAN: {
+        name: 'lesbian',
+        logo: ['#d52d00', '#ff9a56', '#ffffff', '#d362a4', '#a30262'],
+        particles: ['#d52d00', '#ff9a56', '#ffffff', '#d362a4', '#a30262'],
+      },
+      PAN: {
+        name: 'pansexual',
+        logo: ['#ff218c', '#ffd800', '#21b1ff'],
+        particles: ['#ff218c', '#ffd800', '#21b1ff'],
+      },
+      BI: {
+        name: 'bisexual',
+        logo: ['#d60270', '#9b4f96', '#0038a8'],
+        particles: ['#d60270', '#9b4f96', '#0038a8'],
+      },
+      TRANS: {
+        name: 'transgender',
+        logo: ['#5bcefa', '#f5a9b8', '#ffffff', '#f5a9b8', '#5bcefa'],
+        particles: ['#5bcefa', '#f5a9b8', '#ffffff'],
+      },
+      INTERSEX: {
+        name: 'intersex',
+        logo: ['#ffd800', '#7902aa', '#ffd800'],
+        particles: ['#ffd800', '#7902aa'],
+      },
+      RAINBOW: {
+        name: 'rainbow',
+        logo: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#24408e', '#732982'],
+        particles: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#24408e', '#732982'],
+      },
+      ABORIGINAL: {
+        name: 'aboriginal',
+        logo: ['#000000', '#dd0000', '#ffcf00'],
+        particles: ['#000000', '#dd0000', '#ffcf00'],
+      },
+    };
+    const commandAliases: Record<string, string> = {
+      PANSEXUAL: 'PAN',
+      BISEXUAL: 'BI',
+      TRANSGENDER: 'TRANS',
+      LGBT: 'RAINBOW',
+      INDIGENOUS: 'ABORIGINAL',
+      GREY: 'WHITE',
+      GRAY: 'WHITE',
+    };
     const glyphs = [
       'ア',
       'イ',
@@ -163,6 +260,35 @@ const logoText = String.raw`    ___ ____          __             __
     let height = 0;
     let typingComplete = false;
     let visible = true;
+    let activeMode = colourModes.DEFAULT;
+
+    const makeGradient = (colors: string[]) => {
+      if (colors.length === 1) return `linear-gradient(90deg, ${colors[0]}, ${colors[0]})`;
+      return `linear-gradient(90deg, ${colors
+        .map((color, index) => `${color} ${(index / (colors.length - 1)) * 100}%`)
+        .join(', ')})`;
+    };
+
+    const applyColourMode = (mode: ColourMode) => {
+      activeMode = mode;
+      stage.dataset.colourMode = mode.name;
+      stage.style.setProperty('--terminal-primary', mode.particles[0] ?? '#ff304f');
+      stage.style.setProperty('--terminal-gradient', makeGradient(mode.logo));
+    };
+
+    const updateTerminalCursor = () => {
+      if (!terminalInput) return;
+      const position = terminalInput.selectionStart ?? terminalInput.value.length;
+      terminalInput.parentElement?.style.setProperty('--cursor-position', String(position));
+    };
+
+    const revealTerminal = () => {
+      stage.dataset.terminalReady = 'true';
+      if (desktopTerminal.matches && terminalInput) {
+        terminalInput.disabled = false;
+        window.setTimeout(() => terminalInput.focus({ preventScroll: true }), 120);
+      }
+    };
 
     const rebuildOrigins = () => {
       if (!context) return;
@@ -221,9 +347,12 @@ const logoText = String.raw`    ___ ____          __             __
         life: 2.8 + Math.random() * 3.8,
         age: 0,
         glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
+        color:
+          activeMode.particles[Math.floor(Math.random() * activeMode.particles.length)] ??
+          '#ff304f',
         size: 8 + Math.floor(Math.random() * 8),
-        rotation: (Math.random() - 0.5) * 1.5,
-        angularVelocity: (Math.random() - 0.5) * 0.75,
+        rotation: 0,
+        angularVelocity: (Math.random() < 0.5 ? -1 : 1) * (1.25 + Math.random() * 2.75),
       });
       particles.push(particle);
       nextSpawnAt = time + 38 + Math.random() * 155;
@@ -233,13 +362,17 @@ const logoText = String.raw`    ___ ____          __             __
       if (typingComplete) return;
       const startedAt = Number(logo.dataset.typingStarted ?? time);
       logo.dataset.typingStarted = String(startedAt);
-      const characterCount = Math.min(fullText.length, Math.floor((time - startedAt) * 0.34));
+      const characterCount = Math.min(
+        fullText.length,
+        Math.floor(((time - startedAt) / typingDuration) * fullText.length),
+      );
       output.textContent = fullText.slice(0, characterCount);
       shimmer.textContent = output.textContent;
       if (characterCount >= fullText.length) {
         typingComplete = true;
         logo.dataset.typing = 'false';
         nextSpawnAt = time + 180;
+        revealTerminal();
       }
     };
 
@@ -258,8 +391,6 @@ const logoText = String.raw`    ___ ____          __             __
         if (Math.random() > 0.74) createParticle(time);
       }
 
-      context.shadowBlur = 7;
-      context.shadowColor = '#ff304f';
       for (let index = particles.length - 1; index >= 0; index -= 1) {
         const particle = particles[index];
         particle.age += elapsed;
@@ -272,7 +403,10 @@ const logoText = String.raw`    ___ ____          __             __
         context.translate(particle.x, particle.y);
         context.rotate(particle.rotation);
         context.font = `${particle.size}px "IBM Plex Mono", monospace`;
-        context.fillStyle = `rgba(255, 48, 79, ${opacity})`;
+        context.globalAlpha = opacity;
+        context.fillStyle = particle.color;
+        context.shadowBlur = 7;
+        context.shadowColor = particle.color;
         context.fillText(particle.glyph, 0, 0);
         context.restore();
         if (particle.y > height + 20 || particle.age >= particle.life) {
@@ -287,7 +421,33 @@ const logoText = String.raw`    ___ ____          __             __
       shimmer.textContent = fullText;
       logo.dataset.typing = 'false';
       typingComplete = true;
+      revealTerminal();
     }
+
+    applyColourMode(activeMode);
+
+    terminalForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!terminalInput) return;
+      const submitted = terminalInput.value.trim().toUpperCase();
+      const command = commandAliases[submitted] ?? submitted;
+      const mode = colourModes[command];
+      if (mode) applyColourMode(mode);
+      terminalInput.value = '';
+      updateTerminalCursor();
+    });
+    for (const eventName of ['input', 'keyup', 'click', 'select']) {
+      terminalInput?.addEventListener(eventName, updateTerminalCursor);
+    }
+    stage.addEventListener('pointerdown', (event) => {
+      if (
+        desktopTerminal.matches &&
+        stage.dataset.terminalReady === 'true' &&
+        !(event.target instanceof HTMLAnchorElement)
+      ) {
+        terminalInput?.focus({ preventScroll: true });
+      }
+    });
 
     resize();
     document.fonts?.ready.then(resize);
