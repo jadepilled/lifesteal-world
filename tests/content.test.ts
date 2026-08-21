@@ -23,6 +23,19 @@ describe('checked-in content', () => {
     expect(new Set(artists.map((artist) => artist.id)).size).toBe(artists.length);
   });
 
+  it('deduplicates requested cross-platform releases', () => {
+    expect(
+      releases.filter((release) => release.canonicalId === 'starstrike-echoes-of-hoenn'),
+    ).toHaveLength(1);
+    const internetDepressionClub = releases.find(
+      (release) => release.canonicalId === 'starstrike-internet-depression-club',
+    );
+    expect(internetDepressionClub?.links.map((link) => link.platform).sort()).toEqual([
+      'soundcloud',
+      'spotify',
+    ]);
+  });
+
   it('references existing artists and releases', () => {
     const artistIds = new Set(artists.map((artist) => artist.id));
     const releaseIds = new Set(releases.map((release) => release.canonicalId));

@@ -6,12 +6,19 @@ const logoText = String.raw`    ___ ____          __             __
 /_/_/_/  \___/____/\__/\___/\__,_/_/`;
 ---
 
-<div class="ascii-stage" data-ascii-stage data-colour-mode="bisexual">
-  <div class="ascii-stage__status" aria-hidden="true">
-    <span>LIFESTEAL // HOME</span>
-    <span>FOUNDED 2021</span>
-  </div>
+<div class="ascii-stage" data-ascii-stage data-colour-mode="green">
   <canvas class="ascii-stage__canvas" data-rain-canvas aria-hidden="true"></canvas>
+  <section class="ascii-snake" data-snake hidden tabindex="-1" aria-label="SNAKE terminal game">
+    <div class="ascii-snake__register">
+      <span>SNAKE.EXE</span>
+      <span data-snake-score>SCORE 000</span>
+    </div>
+    <canvas data-snake-canvas width="600" height="360" aria-hidden="true"></canvas>
+    <div class="ascii-snake__footer">
+      <span data-snake-status aria-live="polite">ARROWS / WASD TO MOVE</span>
+      <button type="button" data-snake-exit>ESC / EXIT</button>
+    </div>
+  </section>
   <div class="ascii-console">
     <pre
       class="ascii-logo"
@@ -50,7 +57,13 @@ const logoText = String.raw`    ___ ____          __             __
 </div>
 
 <script>
-  import { applyStoredTheme, applyTheme, resolveThemeCommand, type ThemeMode } from '../lib/theme';
+  import {
+    applyStoredTheme,
+    applyTheme,
+    resetTheme,
+    resolveThemeCommand,
+    type ThemeMode,
+  } from '../lib/theme';
 
   type RainOrigin = { x: number; y: number };
   type LogoInkLine = { baselineY: number; text: string; x: number };
@@ -63,388 +76,602 @@ const logoText = String.raw`    ___ ____          __             __
     nextGlyphAt: number;
     spacing: number;
     speed: number;
+    spawnY: number;
     x: number;
   };
 
-  const stage = document.querySelector<HTMLElement>('[data-ascii-stage]');
-  const logo = stage?.querySelector<HTMLElement>('[data-ascii-logo]');
-  const source = stage?.querySelector<HTMLElement>('[data-ascii-source]');
-  const output = stage?.querySelector<HTMLElement>('[data-ascii-output]');
-  const shimmer = stage?.querySelector<HTMLElement>('[data-ascii-shimmer]');
-  const canvas = stage?.querySelector<HTMLCanvasElement>('[data-rain-canvas]');
-  const terminalForm = stage?.querySelector<HTMLFormElement>('[data-terminal-form]');
-  const terminalInput = stage?.querySelector<HTMLInputElement>('[data-terminal-input]');
-  const terminalValue = stage?.querySelector<HTMLElement>('[data-terminal-value]');
+  const setupAsciiLogo = () => {
+    const stage = document.querySelector<HTMLElement>('[data-ascii-stage]');
+    const logo = stage?.querySelector<HTMLElement>('[data-ascii-logo]');
+    const source = stage?.querySelector<HTMLElement>('[data-ascii-source]');
+    const output = stage?.querySelector<HTMLElement>('[data-ascii-output]');
+    const shimmer = stage?.querySelector<HTMLElement>('[data-ascii-shimmer]');
+    const canvas = stage?.querySelector<HTMLCanvasElement>('[data-rain-canvas]');
+    const terminalForm = stage?.querySelector<HTMLFormElement>('[data-terminal-form]');
+    const terminalInput = stage?.querySelector<HTMLInputElement>('[data-terminal-input]');
+    const terminalValue = stage?.querySelector<HTMLElement>('[data-terminal-value]');
+    const snakePanel = stage?.querySelector<HTMLElement>('[data-snake]');
+    const snakeCanvas = stage?.querySelector<HTMLCanvasElement>('[data-snake-canvas]');
+    const snakeScore = stage?.querySelector<HTMLElement>('[data-snake-score]');
+    const snakeStatus = stage?.querySelector<HTMLElement>('[data-snake-status]');
+    const snakeExit = stage?.querySelector<HTMLButtonElement>('[data-snake-exit]');
 
-  if (stage && logo && source && output && shimmer && canvas) {
-    const context = canvas.getContext('2d', { alpha: true });
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const desktopTerminal = window.matchMedia('(min-width: 901px)');
-    const mobileViewport = window.matchMedia('(max-width: 700px)');
-    const typingDuration = 5000;
-    const typingTick = 72;
-    const glyphs = [
-      ...'0123456789',
-      ...'!@#$%^&*+-=<>?/\\|[]{}:;~_',
-      ...'アカサタナハマヤラワイキシチニヒミリヰウクスツヌフムユルヱエケセテネヘメレヲオコソトノホモヨロン',
-      ...'あかさたなはまやらわいきしちにひみりうくすつぬふむゆるえけせてねへめれをおこそとのほもよろん',
-      ...'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω',
-      ...'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯабвгдежзиклмнопрстуфхцчшщэюя',
-      ...'אבגדהוזחטיכלמנסעפצקרשת',
-      ...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي',
-      ...'가나다라마바사아자차카타파하',
-      ...'अआइईउऊकखगघचछजझटठडढतथदधपफबभमयरलवशषसह',
-    ];
-    const fullText = source.textContent ?? '';
-    const origins: RainOrigin[] = [];
-    const logoInkLines: LogoInkLine[] = [];
-    const logoStreams: RainStream[] = [];
-    const ambientStreams: RainStream[] = [];
-    const routeBase = import.meta.env.BASE_URL.replace(/\/$/, '');
-    const routeCommands: Record<string, string> = {
-      HOME: '/',
-      ARTIST: '/artists/',
-      ARTISTS: '/artists/',
-      RELEASE: '/releases/',
-      RELEASES: '/releases/',
-      RADIO: '/radio/',
-      STORE: '/store/',
-      ABOUT: '/about/',
-    };
-    let frame = 0;
-    let lastTime = 0;
-    let width = 0;
-    let height = 0;
-    let typingComplete = false;
-    let typedCharacterCount = -1;
-    let visible = true;
-    let activeMode = applyStoredTheme();
-    let logoMaskFont = '';
-    let nextAmbientSpawnAt = performance.now() + 180 + Math.random() * 520;
-    let nextLogoSpawnAt = Number.POSITIVE_INFINITY;
-
-    const randomGlyph = () => glyphs[Math.floor(Math.random() * glyphs.length)] ?? 'ア';
-
-    const applyVisualMode = (mode: ThemeMode) => {
-      activeMode = mode;
-      stage.dataset.colourMode = mode.name;
-      stage.style.setProperty('--terminal-primary', mode.accent);
-    };
-
-    const createGlyphTrail = (length: number) => Array.from({ length }, () => randomGlyph());
-
-    const createLogoStream = (time: number): RainStream | undefined => {
-      const origin = origins[Math.floor(Math.random() * origins.length)];
-      if (!origin) return undefined;
-      const length = 5 + Math.floor(Math.random() * 12);
-      return {
-        ambient: false,
-        x: origin.x,
-        headY: origin.y + 1,
-        speed: 42 + Math.pow(Math.random(), 0.7) * 112,
-        spacing: 10 + Math.random() * 6,
-        length,
-        glyphs: createGlyphTrail(length),
-        nextGlyphAt: time + 55 + Math.random() * 185,
-        colorOffset: Math.floor(Math.random() * activeMode.rain.length),
+    if (stage && logo && source && output && shimmer && canvas) {
+      const context = canvas.getContext('2d', { alpha: true });
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const desktopTerminal = window.matchMedia('(min-width: 901px)');
+      const mobileViewport = window.matchMedia('(max-width: 700px)');
+      const typingDuration = 5000;
+      const typingTick = 72;
+      const glyphs = [
+        ...'0123456789',
+        ...'!@#$%^&*+-=<>?/\\|[]{}:;~_',
+        ...'アカサタナハマヤラワイキシチニヒミリヰウクスツヌフムユルヱエケセテネヘメレヲオコソトノホモヨロン',
+        ...'あかさたなはまやらわいきしちにひみりうくすつぬふむゆるえけせてねへめれをおこそとのほもよろん',
+        ...'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω',
+        ...'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯабвгдежзиклмнопрстуфхцчшщэюя',
+        ...'אבגדהוזחטיכלמנסעפצקרשת',
+        ...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي',
+        ...'가나다라마바사아자차카타파하',
+        ...'अआइईउऊकखगघचछजझटठडढतथदधपफबभमयरलवशषसह',
+      ];
+      const fullText = source.textContent ?? '';
+      const origins: RainOrigin[] = [];
+      const logoInkLines: LogoInkLine[] = [];
+      const logoStreams: RainStream[] = [];
+      const ambientStreams: RainStream[] = [];
+      const routeBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const routeCommands: Record<string, string> = {
+        HOME: '/',
+        ARTIST: '/artists/',
+        ARTISTS: '/artists/',
+        RELEASE: '/releases/',
+        RELEASES: '/releases/',
+        RADIO: '/radio/',
+        STORE: '/store/',
+        ABOUT: '/about/',
       };
-    };
+      let frame = 0;
+      let lastTime = 0;
+      let width = 0;
+      let height = 0;
+      let typingComplete = false;
+      let typedCharacterCount = -1;
+      let visible = true;
+      let activeMode = applyStoredTheme();
+      let logoMaskFont = '';
+      let nextAmbientSpawnAt = performance.now() + 180 + Math.random() * 520;
+      let nextLogoSpawnAt = Number.POSITIVE_INFINITY;
+      let snakeTimer = 0;
+      let snakeSegments: Array<{ x: number; y: number }> = [];
+      let snakeDirection = { x: 1, y: 0 };
+      let snakeNextDirection = { x: 1, y: 0 };
+      let snakeFood = { x: 21, y: 9 };
+      let snakeGameOver = false;
+      let snakePaused = false;
 
-    const createAmbientStream = (time: number): RainStream => {
-      const grid = mobileViewport.matches ? 15 : 13;
-      const length = 19 + Math.floor(Math.random() * 25);
-      const spacing = 12 + Math.random() * 7;
-      return {
-        ambient: true,
-        x: Math.round((Math.random() * width) / grid) * grid,
-        headY: -spacing,
-        speed: 9 + Math.pow(Math.random(), 0.72) * 31,
-        spacing,
-        length,
-        glyphs: createGlyphTrail(length),
-        nextGlyphAt: time + 100 + Math.random() * 360,
-        colorOffset: Math.floor(Math.random() * activeMode.rain.length),
+      const randomGlyph = () => glyphs[Math.floor(Math.random() * glyphs.length)] ?? 'ア';
+
+      const applyVisualMode = (mode: ThemeMode) => {
+        activeMode = mode;
+        stage.dataset.colourMode = mode.name;
+        stage.style.setProperty('--terminal-primary', mode.accent);
       };
-    };
 
-    const scheduleRain = (time: number) => {
-      if (time >= nextAmbientSpawnAt) {
-        const ambientLimit = mobileViewport.matches ? 18 : 38;
-        if (ambientStreams.length < ambientLimit) {
-          ambientStreams.push(createAmbientStream(time));
+      const createGlyphTrail = (length: number) => Array.from({ length }, () => randomGlyph());
+
+      const createLogoStream = (time: number): RainStream | undefined => {
+        const origin = origins[Math.floor(Math.random() * origins.length)];
+        if (!origin) return undefined;
+        const length = 5 + Math.floor(Math.random() * 12);
+        return {
+          ambient: false,
+          x: origin.x,
+          headY: origin.y + 1,
+          spawnY: origin.y + 1,
+          speed: 42 + Math.pow(Math.random(), 0.7) * 112,
+          spacing: 10 + Math.random() * 6,
+          length,
+          glyphs: createGlyphTrail(length),
+          nextGlyphAt: time + 55 + Math.random() * 185,
+          colorOffset: Math.floor(Math.random() * activeMode.rain.length),
+        };
+      };
+
+      const createAmbientStream = (time: number): RainStream => {
+        const grid = mobileViewport.matches ? 15 : 13;
+        const length = 19 + Math.floor(Math.random() * 25);
+        const spacing = 12 + Math.random() * 7;
+        return {
+          ambient: true,
+          x: Math.round((Math.random() * width) / grid) * grid,
+          headY: -spacing,
+          spawnY: -spacing,
+          speed: 9 + Math.pow(Math.random(), 0.72) * 31,
+          spacing,
+          length,
+          glyphs: createGlyphTrail(length),
+          nextGlyphAt: time + 100 + Math.random() * 360,
+          colorOffset: Math.floor(Math.random() * activeMode.rain.length),
+        };
+      };
+
+      const scheduleRain = (time: number) => {
+        if (time >= nextAmbientSpawnAt) {
+          const ambientLimit = mobileViewport.matches ? 18 : 38;
+          if (ambientStreams.length < ambientLimit) {
+            ambientStreams.push(createAmbientStream(time));
+          }
+          nextAmbientSpawnAt = time + 170 + Math.random() * 760;
         }
-        nextAmbientSpawnAt = time + 170 + Math.random() * 760;
-      }
 
-      if (typingComplete && time >= nextLogoSpawnAt) {
-        const logoLimit = mobileViewport.matches ? 16 : 32;
-        if (logoStreams.length < logoLimit) {
-          const stream = createLogoStream(time);
-          if (stream) logoStreams.push(stream);
+        if (typingComplete && time >= nextLogoSpawnAt) {
+          const logoLimit = mobileViewport.matches ? 16 : 32;
+          if (logoStreams.length < logoLimit) {
+            const stream = createLogoStream(time);
+            if (stream) logoStreams.push(stream);
+          }
+          nextLogoSpawnAt = time + 105 + Math.random() * 620;
         }
-        nextLogoSpawnAt = time + 105 + Math.random() * 620;
-      }
-    };
+      };
 
-    const rebuildGeometry = () => {
-      if (!context) return;
-      origins.length = 0;
-      logoInkLines.length = 0;
-      const stageRect = stage.getBoundingClientRect();
-      const logoRect = logo.getBoundingClientRect();
-      const style = getComputedStyle(logo);
-      const fontSize = Number.parseFloat(style.fontSize);
-      const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.1;
-      logoMaskFont = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
-      context.font = logoMaskFont;
-      const characterWidth = context.measureText('0').width;
-      const lines = fullText.split('\n');
-      const columns = Math.max(...lines.map((line) => line.length));
-      const logoLeft = logoRect.left - stageRect.left;
-      const logoTop = logoRect.top - stageRect.top;
+      const rebuildGeometry = () => {
+        if (!context) return;
+        origins.length = 0;
+        logoInkLines.length = 0;
+        const stageRect = stage.getBoundingClientRect();
+        const logoRect = logo.getBoundingClientRect();
+        const style = getComputedStyle(logo);
+        const fontSize = Number.parseFloat(style.fontSize);
+        const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.1;
+        logoMaskFont = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+        context.font = logoMaskFont;
+        const characterWidth = context.measureText('0').width;
+        const lines = fullText.split('\n');
+        const columns = Math.max(...lines.map((line) => line.length));
+        const logoLeft = logoRect.left - stageRect.left;
+        const logoTop = logoRect.top - stageRect.top;
 
-      for (let row = 0; row < lines.length; row += 1) {
-        const line = lines[row] ?? '';
-        if (/\S/.test(line)) {
-          const metrics = context.measureText(line);
-          const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
-          const descent = metrics.actualBoundingBoxDescent || fontSize * 0.2;
-          logoInkLines.push({
-            x: logoLeft,
-            baselineY: logoTop + row * lineHeight + (lineHeight - ascent - descent) / 2 + ascent,
-            text: line,
-          });
-        }
-      }
-
-      for (let column = 0; column < columns; column += 1) {
-        let lastInkRow = -1;
         for (let row = 0; row < lines.length; row += 1) {
-          if ((lines[row]?.[column] ?? ' ') !== ' ') lastInkRow = row;
+          const line = lines[row] ?? '';
+          if (/\S/.test(line)) {
+            const metrics = context.measureText(line);
+            const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+            const descent = metrics.actualBoundingBoxDescent || fontSize * 0.2;
+            logoInkLines.push({
+              x: logoLeft,
+              baselineY: logoTop + row * lineHeight + (lineHeight - ascent - descent) / 2 + ascent,
+              text: line,
+            });
+          }
         }
-        if (lastInkRow >= 0) {
-          origins.push({
-            x: logoLeft + (column + 0.5) * characterWidth,
-            y: logoTop + (lastInkRow + 0.92) * lineHeight,
-          });
+
+        for (let column = 0; column < columns; column += 1) {
+          let lastInkRow = -1;
+          for (let row = 0; row < lines.length; row += 1) {
+            if ((lines[row]?.[column] ?? ' ') !== ' ') lastInkRow = row;
+          }
+          if (lastInkRow >= 0) {
+            origins.push({
+              x: logoLeft + (column + 0.5) * characterWidth,
+              y: logoTop + (lastInkRow + 0.92) * lineHeight,
+            });
+          }
         }
-      }
 
-      for (let index = ambientStreams.length - 1; index >= 0; index -= 1) {
-        if ((ambientStreams[index]?.x ?? 0) > width + 20) ambientStreams.splice(index, 1);
-      }
-      for (let index = logoStreams.length - 1; index >= 0; index -= 1) {
-        if ((logoStreams[index]?.x ?? 0) > width + 20) logoStreams.splice(index, 1);
-      }
-    };
-
-    const resize = () => {
-      const stageRect = stage.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, mobileViewport.matches ? 1.2 : 1.4);
-      width = stageRect.width;
-      height = stageRect.height;
-      canvas.width = Math.round(width * ratio);
-      canvas.height = Math.round(height * ratio);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context?.setTransform(ratio, 0, 0, ratio, 0, 0);
-      rebuildGeometry();
-    };
-
-    const updateGlyphs = (stream: RainStream, time: number) => {
-      if (time < stream.nextGlyphAt) return;
-      for (let index = 0; index < stream.glyphs.length; index += 1) {
-        if (Math.random() > 0.48) stream.glyphs[index] = randomGlyph();
-      }
-      stream.nextGlyphAt = time + (stream.ambient ? 150 : 70) + Math.random() * 180;
-    };
-
-    const drawStream = (stream: RainStream, time: number) => {
-      if (!context || stream.headY < 0 || stream.headY - stream.length * stream.spacing > height) {
-        return false;
-      }
-      updateGlyphs(stream, time);
-      context.font = '12px "IBM Plex Mono", monospace';
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      let drewGlyph = false;
-
-      for (let index = stream.length - 1; index >= 0; index -= 1) {
-        const y = stream.headY - index * stream.spacing;
-        if (y < 0 || y > height + stream.spacing) continue;
-        const strength = 1 - index / stream.length;
-        const color =
-          activeMode.rain[(stream.colorOffset + index) % activeMode.rain.length] ??
-          activeMode.accent;
-        context.save();
-        context.globalAlpha = stream.ambient ? 0.18 + strength * 0.42 : 0.12 + strength * 0.76;
-        context.fillStyle = color;
-        if (stream.ambient && index === 0) {
-          context.globalAlpha = 0.68;
-          context.shadowBlur = 4;
-          context.shadowColor = color;
+        for (let index = ambientStreams.length - 1; index >= 0; index -= 1) {
+          if ((ambientStreams[index]?.x ?? 0) > width + 20) ambientStreams.splice(index, 1);
         }
-        if (!stream.ambient && index === 0) {
-          context.globalAlpha = 0.96;
-          context.shadowBlur = 10;
-          context.shadowColor = color;
-        }
-        context.fillText(stream.glyphs[index] ?? randomGlyph(), stream.x, y);
-        context.restore();
-        drewGlyph = true;
-      }
-      return drewGlyph;
-    };
-
-    const maskLogoCoverage = () => {
-      if (!context) return;
-      context.save();
-      context.globalCompositeOperation = 'destination-out';
-      context.fillStyle = '#000';
-      context.font = logoMaskFont;
-      context.textAlign = 'left';
-      context.textBaseline = 'alphabetic';
-      for (const line of logoInkLines) context.fillText(line.text, line.x, line.baselineY);
-      context.restore();
-    };
-
-    const typeLogo = (time: number) => {
-      if (typingComplete) return;
-      const startedAt = Number(logo.dataset.typingStarted ?? time);
-      logo.dataset.typingStarted = String(startedAt);
-      const elapsed = Math.min(typingDuration, time - startedAt);
-      const totalTicks = Math.ceil(typingDuration / typingTick);
-      const completedTicks = Math.floor(elapsed / typingTick);
-      const characterCount =
-        elapsed >= typingDuration
-          ? fullText.length
-          : Math.min(fullText.length, Math.floor((completedTicks / totalTicks) * fullText.length));
-      if (characterCount !== typedCharacterCount) {
-        typedCharacterCount = characterCount;
-        output.textContent = fullText.slice(0, characterCount);
-        shimmer.textContent = output.textContent;
-      }
-      if (characterCount >= fullText.length) {
-        typingComplete = true;
-        logo.dataset.typing = 'false';
-        stage.dataset.terminalReady = 'true';
-        nextLogoSpawnAt = time + 160 + Math.random() * 420;
-        if (desktopTerminal.matches && terminalInput) {
-          terminalInput.disabled = false;
-          window.setTimeout(() => terminalInput.focus({ preventScroll: true }), 120);
-        }
-      }
-    };
-
-    const draw = (time: number) => {
-      frame = requestAnimationFrame(draw);
-      if (!context || reducedMotion.matches || document.hidden || !visible) return;
-      typeLogo(time);
-      if (lastTime === 0) lastTime = time;
-      const frameInterval = mobileViewport.matches ? 1000 / 24 : 1000 / 32;
-      if (time - lastTime < frameInterval) return;
-      const elapsed = Math.min((time - lastTime) / 1000, 0.065);
-      lastTime = time;
-      context.clearRect(0, 0, width, height);
-      let drewRain = false;
-      scheduleRain(time);
-
-      for (let index = ambientStreams.length - 1; index >= 0; index -= 1) {
-        const stream = ambientStreams[index];
-        if (!stream) continue;
-        stream.headY += stream.speed * elapsed;
-        if (stream.headY - stream.length * stream.spacing > height + 20) {
-          ambientStreams.splice(index, 1);
-          continue;
-        }
-        drewRain = drawStream(stream, time) || drewRain;
-      }
-
-      if (typingComplete) {
         for (let index = logoStreams.length - 1; index >= 0; index -= 1) {
-          const stream = logoStreams[index];
+          if ((logoStreams[index]?.x ?? 0) > width + 20) logoStreams.splice(index, 1);
+        }
+      };
+
+      const resize = () => {
+        const stageRect = stage.getBoundingClientRect();
+        const ratio = Math.min(window.devicePixelRatio || 1, mobileViewport.matches ? 1.2 : 1.4);
+        width = stageRect.width;
+        height = stageRect.height;
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context?.setTransform(ratio, 0, 0, ratio, 0, 0);
+        rebuildGeometry();
+      };
+
+      const updateGlyphs = (stream: RainStream, time: number) => {
+        if (time < stream.nextGlyphAt) return;
+        for (let index = 0; index < stream.glyphs.length; index += 1) {
+          if (Math.random() > 0.48) stream.glyphs[index] = randomGlyph();
+        }
+        stream.nextGlyphAt = time + (stream.ambient ? 150 : 70) + Math.random() * 180;
+      };
+
+      const drawStream = (stream: RainStream, time: number) => {
+        if (
+          !context ||
+          stream.headY < 0 ||
+          stream.headY - stream.length * stream.spacing > height
+        ) {
+          return false;
+        }
+        updateGlyphs(stream, time);
+        context.font = '12px "IBM Plex Mono", monospace';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        let drewGlyph = false;
+
+        const visibleTrail = stream.ambient
+          ? stream.length - 1
+          : Math.min(
+              stream.length - 1,
+              Math.floor((stream.headY - stream.spawnY) / stream.spacing),
+            );
+        for (let index = visibleTrail; index >= 0; index -= 1) {
+          const y = stream.headY - index * stream.spacing;
+          if (y < 0 || y > height + stream.spacing) continue;
+          const strength = 1 - index / stream.length;
+          const color =
+            activeMode.rain[(stream.colorOffset + index) % activeMode.rain.length] ??
+            activeMode.accent;
+          context.save();
+          context.globalAlpha = stream.ambient ? 0.18 + strength * 0.42 : 0.12 + strength * 0.76;
+          context.fillStyle = color;
+          if (stream.ambient && index === 0) {
+            context.globalAlpha = 0.68;
+            context.shadowBlur = 4;
+            context.shadowColor = color;
+          }
+          if (!stream.ambient && index === 0) {
+            context.globalAlpha = 0.96;
+            context.shadowBlur = 10;
+            context.shadowColor = color;
+          }
+          context.fillText(stream.glyphs[index] ?? randomGlyph(), stream.x, y);
+          context.restore();
+          drewGlyph = true;
+        }
+        return drewGlyph;
+      };
+
+      const maskLogoCoverage = () => {
+        if (!context) return;
+        context.save();
+        context.globalCompositeOperation = 'destination-out';
+        context.fillStyle = '#000';
+        context.font = logoMaskFont;
+        context.textAlign = 'left';
+        context.textBaseline = 'alphabetic';
+        for (const line of logoInkLines) context.fillText(line.text, line.x, line.baselineY);
+        context.restore();
+      };
+
+      const typeLogo = (time: number) => {
+        if (typingComplete) return;
+        const startedAt = Number(logo.dataset.typingStarted ?? time);
+        logo.dataset.typingStarted = String(startedAt);
+        const elapsed = Math.min(typingDuration, time - startedAt);
+        const totalTicks = Math.ceil(typingDuration / typingTick);
+        const completedTicks = Math.floor(elapsed / typingTick);
+        const characterCount =
+          elapsed >= typingDuration
+            ? fullText.length
+            : Math.min(
+                fullText.length,
+                Math.floor((completedTicks / totalTicks) * fullText.length),
+              );
+        if (characterCount !== typedCharacterCount) {
+          typedCharacterCount = characterCount;
+          output.textContent = fullText.slice(0, characterCount);
+          shimmer.textContent = output.textContent;
+        }
+        if (characterCount >= fullText.length) {
+          typingComplete = true;
+          logo.dataset.typing = 'false';
+          stage.dataset.terminalReady = 'true';
+          nextLogoSpawnAt = time + 160 + Math.random() * 420;
+          if (desktopTerminal.matches && terminalInput) {
+            terminalInput.disabled = false;
+            window.setTimeout(() => terminalInput.focus({ preventScroll: true }), 120);
+          }
+        }
+      };
+
+      const draw = (time: number) => {
+        frame = requestAnimationFrame(draw);
+        if (!context || reducedMotion.matches || document.hidden || !visible) return;
+        typeLogo(time);
+        if (lastTime === 0) lastTime = time;
+        const frameInterval = mobileViewport.matches ? 1000 / 24 : 1000 / 32;
+        if (time - lastTime < frameInterval) return;
+        const elapsed = Math.min((time - lastTime) / 1000, 0.065);
+        lastTime = time;
+        context.clearRect(0, 0, width, height);
+        let drewRain = false;
+        scheduleRain(time);
+
+        for (let index = ambientStreams.length - 1; index >= 0; index -= 1) {
+          const stream = ambientStreams[index];
           if (!stream) continue;
           stream.headY += stream.speed * elapsed;
           if (stream.headY - stream.length * stream.spacing > height + 20) {
-            logoStreams.splice(index, 1);
+            ambientStreams.splice(index, 1);
             continue;
           }
           drewRain = drawStream(stream, time) || drewRain;
         }
-      }
-      if (drewRain) maskLogoCoverage();
-    };
 
-    const updateTerminalValue = () => {
-      if (terminalValue) terminalValue.textContent = terminalInput?.value.toUpperCase() ?? '';
-    };
+        if (typingComplete) {
+          for (let index = logoStreams.length - 1; index >= 0; index -= 1) {
+            const stream = logoStreams[index];
+            if (!stream) continue;
+            stream.headY += stream.speed * elapsed;
+            if (stream.headY - stream.length * stream.spacing > height + 20) {
+              logoStreams.splice(index, 1);
+              continue;
+            }
+            drewRain = drawStream(stream, time) || drewRain;
+          }
+        }
+        if (drewRain) maskLogoCoverage();
+      };
 
-    const requestNavigation = (path: string) => {
-      const href = `${routeBase}${path}` || '/';
-      window.dispatchEvent(new CustomEvent('lifesteal:navigate', { detail: { href } }));
-    };
+      const updateTerminalValue = () => {
+        if (terminalValue) terminalValue.textContent = terminalInput?.value.toUpperCase() ?? '';
+      };
 
-    terminalForm?.addEventListener('submit', (event) => {
-      event.preventDefault();
-      if (!terminalInput) return;
-      const submitted = terminalInput.value.trim().toUpperCase();
-      const mode = resolveThemeCommand(submitted);
-      const route = routeCommands[submitted];
-      if (mode) {
-        applyVisualMode(mode);
-        applyTheme(mode);
-      } else if (route) requestNavigation(route);
-      terminalInput.value = '';
-      updateTerminalValue();
-    });
-    for (const eventName of ['input', 'keyup', 'click', 'select']) {
-      terminalInput?.addEventListener(eventName, updateTerminalValue);
-    }
-    stage.addEventListener('pointerdown', (event) => {
-      if (
-        desktopTerminal.matches &&
-        stage.dataset.terminalReady === 'true' &&
-        !(event.target instanceof HTMLAnchorElement)
-      ) {
-        if (event.target !== terminalInput) event.preventDefault();
+      const requestNavigation = (path: string) => {
+        const href = `${routeBase}${path}` || '/';
+        window.dispatchEvent(new CustomEvent('lifesteal:navigate', { detail: { href } }));
+      };
+
+      const snakeContext = snakeCanvas?.getContext('2d');
+      const snakeColumns = 30;
+      const snakeRows = 18;
+      const snakeCell = 20;
+
+      const placeSnakeFood = () => {
+        do {
+          snakeFood = {
+            x: Math.floor(Math.random() * snakeColumns),
+            y: Math.floor(Math.random() * snakeRows),
+          };
+        } while (
+          snakeSegments.some((segment) => segment.x === snakeFood.x && segment.y === snakeFood.y)
+        );
+      };
+
+      const drawSnake = () => {
+        if (!snakeContext || !snakeCanvas) return;
+        snakeContext.clearRect(0, 0, snakeCanvas.width, snakeCanvas.height);
+        snakeContext.fillStyle = 'rgba(0, 0, 0, 0.9)';
+        snakeContext.fillRect(0, 0, snakeCanvas.width, snakeCanvas.height);
+        snakeContext.strokeStyle = activeMode.accent;
+        snakeContext.globalAlpha = 0.1;
+        snakeContext.lineWidth = 1;
+        for (let x = snakeCell; x < snakeCanvas.width; x += snakeCell) {
+          snakeContext.beginPath();
+          snakeContext.moveTo(x, 0);
+          snakeContext.lineTo(x, snakeCanvas.height);
+          snakeContext.stroke();
+        }
+        for (let y = snakeCell; y < snakeCanvas.height; y += snakeCell) {
+          snakeContext.beginPath();
+          snakeContext.moveTo(0, y);
+          snakeContext.lineTo(snakeCanvas.width, y);
+          snakeContext.stroke();
+        }
+        snakeContext.globalAlpha = 1;
+        snakeContext.fillStyle = activeMode.rain[1] ?? '#ffffff';
+        snakeContext.shadowBlur = 15;
+        snakeContext.shadowColor = activeMode.accent;
+        snakeContext.fillRect(
+          snakeFood.x * snakeCell + 5,
+          snakeFood.y * snakeCell + 5,
+          snakeCell - 10,
+          snakeCell - 10,
+        );
+        snakeSegments.forEach((segment, index) => {
+          snakeContext.fillStyle =
+            activeMode.rain[index % activeMode.rain.length] ?? activeMode.accent;
+          snakeContext.globalAlpha = Math.max(
+            0.42,
+            1 - index / Math.max(8, snakeSegments.length * 1.3),
+          );
+          snakeContext.shadowBlur = index === 0 ? 14 : 4;
+          snakeContext.fillRect(
+            segment.x * snakeCell + 2,
+            segment.y * snakeCell + 2,
+            snakeCell - 4,
+            snakeCell - 4,
+          );
+        });
+        snakeContext.globalAlpha = 1;
+        snakeContext.shadowBlur = 0;
+      };
+
+      const resetSnakeBoard = () => {
+        snakeSegments = [
+          { x: 15, y: 9 },
+          { x: 14, y: 9 },
+          { x: 13, y: 9 },
+          { x: 12, y: 9 },
+        ];
+        snakeDirection = { x: 1, y: 0 };
+        snakeNextDirection = { x: 1, y: 0 };
+        snakeGameOver = false;
+        snakePaused = false;
+        placeSnakeFood();
+        if (snakeScore) snakeScore.textContent = 'SCORE 000';
+        if (snakeStatus) snakeStatus.textContent = 'ARROWS / WASD TO MOVE';
+        drawSnake();
+      };
+
+      const snakeTick = () => {
+        if (snakePaused || snakeGameOver || snakeSegments.length === 0) return;
+        snakeDirection = snakeNextDirection;
+        const head = snakeSegments[0]!;
+        const next = {
+          x: (head.x + snakeDirection.x + snakeColumns) % snakeColumns,
+          y: (head.y + snakeDirection.y + snakeRows) % snakeRows,
+        };
+        if (snakeSegments.some((segment) => segment.x === next.x && segment.y === next.y)) {
+          snakeGameOver = true;
+          if (snakeStatus) snakeStatus.textContent = 'SIGNAL LOST // ENTER TO RESTART';
+          drawSnake();
+          return;
+        }
+        snakeSegments.unshift(next);
+        if (next.x === snakeFood.x && next.y === snakeFood.y) {
+          placeSnakeFood();
+        } else {
+          snakeSegments.pop();
+        }
+        if (snakeScore) {
+          snakeScore.textContent = `SCORE ${String((snakeSegments.length - 4) * 10).padStart(3, '0')}`;
+        }
+        drawSnake();
+      };
+
+      const stopSnake = () => {
+        window.clearInterval(snakeTimer);
+        snakeTimer = 0;
+        if (snakePanel) snakePanel.hidden = true;
+        delete stage.dataset.snakeActive;
         terminalInput?.focus({ preventScroll: true });
+      };
+
+      const startSnake = () => {
+        if (!snakePanel || !snakeCanvas) return;
+        window.clearInterval(snakeTimer);
+        stage.dataset.snakeActive = 'true';
+        snakePanel.hidden = false;
+        resetSnakeBoard();
+        snakeTimer = window.setInterval(snakeTick, 105);
+        snakePanel.focus({ preventScroll: true });
+      };
+
+      const handleSnakeKey = (event: KeyboardEvent) => {
+        if (stage.dataset.snakeActive !== 'true') return;
+        const directions: Record<string, { x: number; y: number }> = {
+          ArrowUp: { x: 0, y: -1 },
+          w: { x: 0, y: -1 },
+          ArrowDown: { x: 0, y: 1 },
+          s: { x: 0, y: 1 },
+          ArrowLeft: { x: -1, y: 0 },
+          a: { x: -1, y: 0 },
+          ArrowRight: { x: 1, y: 0 },
+          d: { x: 1, y: 0 },
+        };
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          stopSnake();
+          return;
+        }
+        if (event.key === 'Enter' && snakeGameOver) {
+          event.preventDefault();
+          resetSnakeBoard();
+          return;
+        }
+        if (event.key === ' ') {
+          event.preventDefault();
+          snakePaused = !snakePaused;
+          if (snakeStatus)
+            snakeStatus.textContent = snakePaused
+              ? 'PAUSED // SPACE TO RESUME'
+              : 'ARROWS / WASD TO MOVE';
+          return;
+        }
+        const direction = directions[event.key] ?? directions[event.key.toLowerCase()];
+        if (!direction) return;
+        event.preventDefault();
+        if (direction.x !== -snakeDirection.x || direction.y !== -snakeDirection.y) {
+          snakeNextDirection = direction;
+        }
+      };
+
+      document.addEventListener('keydown', handleSnakeKey);
+      snakeExit?.addEventListener('click', stopSnake);
+
+      terminalForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!terminalInput) return;
+        const submitted = terminalInput.value.trim().toUpperCase();
+        const mode = resolveThemeCommand(submitted);
+        const route = routeCommands[submitted];
+        if (submitted === 'RESET') {
+          applyVisualMode(resetTheme());
+        } else if (submitted === 'SNAKE') {
+          startSnake();
+        } else if (mode) {
+          applyVisualMode(mode);
+          applyTheme(mode);
+        } else if (route) requestNavigation(route);
+        terminalInput.value = '';
+        updateTerminalValue();
+      });
+      for (const eventName of ['input', 'keyup', 'click', 'select']) {
+        terminalInput?.addEventListener(eventName, updateTerminalValue);
       }
-    });
+      stage.addEventListener('pointerdown', (event) => {
+        if (
+          desktopTerminal.matches &&
+          stage.dataset.terminalReady === 'true' &&
+          stage.dataset.snakeActive !== 'true' &&
+          !(event.target instanceof HTMLAnchorElement)
+        ) {
+          if (event.target !== terminalInput) event.preventDefault();
+          terminalInput?.focus({ preventScroll: true });
+        }
+      });
 
-    const handleTheme = (event: Event) => {
-      const mode = (event as CustomEvent<ThemeMode>).detail;
-      if (mode) applyVisualMode(mode);
-    };
-    window.addEventListener('lifesteal:theme', handleTheme);
-    applyVisualMode(activeMode);
+      const handleTheme = (event: Event) => {
+        const mode = (event as CustomEvent<ThemeMode>).detail;
+        if (mode) {
+          applyVisualMode(mode);
+          if (stage.dataset.snakeActive === 'true') drawSnake();
+        }
+      };
+      window.addEventListener('lifesteal:theme', handleTheme);
+      applyVisualMode(activeMode);
 
-    if (reducedMotion.matches) {
-      output.textContent = fullText;
-      shimmer.textContent = fullText;
-      logo.dataset.typing = 'false';
-      typingComplete = true;
-      stage.dataset.terminalReady = 'true';
-      if (desktopTerminal.matches && terminalInput) terminalInput.disabled = false;
+      if (reducedMotion.matches) {
+        output.textContent = fullText;
+        shimmer.textContent = fullText;
+        logo.dataset.typing = 'false';
+        typingComplete = true;
+        stage.dataset.terminalReady = 'true';
+        if (desktopTerminal.matches && terminalInput) terminalInput.disabled = false;
+      }
+
+      resize();
+      document.fonts?.ready.then(resize);
+      const resizeObserver = new ResizeObserver(resize);
+      const visibilityObserver = new IntersectionObserver(
+        ([entry]) => {
+          visible = entry?.isIntersecting ?? true;
+        },
+        { threshold: 0.05 },
+      );
+      resizeObserver.observe(stage);
+      visibilityObserver.observe(stage);
+      frame = requestAnimationFrame(draw);
+
+      document.addEventListener(
+        'astro:before-swap',
+        () => {
+          cancelAnimationFrame(frame);
+          window.clearInterval(snakeTimer);
+          resizeObserver.disconnect();
+          visibilityObserver.disconnect();
+          window.removeEventListener('lifesteal:theme', handleTheme);
+          document.removeEventListener('keydown', handleSnakeKey);
+        },
+        { once: true },
+      );
     }
+  };
 
-    resize();
-    document.fonts?.ready.then(resize);
-    const resizeObserver = new ResizeObserver(resize);
-    const visibilityObserver = new IntersectionObserver(
-      ([entry]) => {
-        visible = entry?.isIntersecting ?? true;
-      },
-      { threshold: 0.05 },
-    );
-    resizeObserver.observe(stage);
-    visibilityObserver.observe(stage);
-    frame = requestAnimationFrame(draw);
-
-    document.addEventListener('astro:before-swap', () => {
-      cancelAnimationFrame(frame);
-      resizeObserver.disconnect();
-      visibilityObserver.disconnect();
-      window.removeEventListener('lifesteal:theme', handleTheme);
-    });
-  }
+  document.addEventListener('astro:page-load', setupAsciiLogo);
 </script>

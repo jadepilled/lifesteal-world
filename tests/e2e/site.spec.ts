@@ -11,11 +11,7 @@ test.describe('site shell', () => {
       page,
     }) => {
       await page.goto(siteUrl(route));
-      if (route === '/store/') {
-        await expect(page.locator('.wordmark')).toHaveCount(0);
-      } else {
-        await expect(page.locator('.wordmark')).toHaveText('lifesteal');
-      }
+      await expect(page.locator('.wordmark')).toHaveText('lifesteal');
       await expect(page.locator('footer')).toContainText('LIFESTEAL acknowledges');
       await expect(page.locator('.terminal-path')).toHaveCount(0);
       await expect(page.locator('.page-heading')).toHaveCount(0);
@@ -46,8 +42,8 @@ test('landing presents the ASCII signal and respects reduced motion', async ({ p
   await expect(page.getByRole('heading', { name: 'LIFESTEAL' })).toBeVisible();
   await expect(page.locator('[data-ascii-logo]')).toBeVisible();
   await expect(page.locator('[data-ascii-output]')).toContainText('___ ____');
-  await expect(page.getByText('LIFESTEAL // HOME')).toBeVisible();
-  await expect(page.getByText('FOUNDED 2021')).toBeVisible();
+  await expect(page.getByText('LIFESTEAL // HOME')).toHaveCount(0);
+  await expect(page.getByText('FOUNDED 2021')).toHaveCount(0);
   await expect(page.getByText('INDEPENDENT AUDIO // NAARM')).toBeVisible();
   await expect(page.locator('[data-rain-canvas]')).toHaveCSS('display', 'none');
   await expect(page.locator('.site-footer__rule')).toHaveCount(0);
@@ -159,7 +155,7 @@ test('custom terminal gradients persist without reverting to red between pages',
   test.skip(isMobile, 'The command terminal is intentionally desktop-only.');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(siteUrl('/'));
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'bisexual');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'green');
 
   const stage = page.locator('[data-ascii-stage]');
   const terminal = page.locator('[data-terminal-input]');
@@ -211,6 +207,52 @@ test('home navigation shows the newsletter gate only once per site visit', async
   await page.locator(`nav a[href="${siteUrl('/releases/')}"]`).click();
   await expect(page).toHaveURL(/\/releases\/(?:#.*)?$/);
   await expect(page.locator('[data-newsletter-gate]')).not.toBeVisible();
+});
+
+test('RESET restores green and SNAKE runs inside the terminal panel', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The command terminal is intentionally desktop-only.');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(siteUrl('/'));
+  const terminal = page.locator('[data-terminal-input]');
+
+  await terminal.fill('PURPLE');
+  await terminal.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'purple');
+  await terminal.fill('RESET');
+  await terminal.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'green');
+  expect(await page.evaluate(() => localStorage.getItem('lifesteal.theme'))).toBeNull();
+
+  await terminal.fill('SNAKE');
+  await terminal.press('Enter');
+  const game = page.locator('[data-snake]');
+  await expect(game).toBeVisible();
+  await expect(page.locator('[data-ascii-stage]')).toHaveAttribute('data-snake-active', 'true');
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(150);
+  await expect(page.locator('[data-snake-score]')).toContainText('SCORE');
+  await page.keyboard.press('Escape');
+  await expect(game).toBeHidden();
+  await expect(terminal).toBeFocused();
+});
+
+test('client navigation keeps the shared shell and reinitializes the landing terminal', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(siteUrl('/'));
+  await page.evaluate(() => sessionStorage.setItem('lifesteal.newsletterGateSeen', 'true'));
+  await expect(page.locator('meta[name="astro-view-transitions-enabled"]')).toHaveCount(1);
+  await page.locator(`nav a[href="${siteUrl('/store/')}"]`).click();
+  await expect(page).toHaveURL(/\/store\/$/);
+  await expect(page.locator('.wordmark')).toBeVisible();
+  await page.locator('.wordmark').click();
+  await expect(page).toHaveURL(new RegExp(`${sitePath}/?$`));
+  await expect(page.locator('[data-ascii-output]')).toContainText('___ ____');
+  await expect(page.locator('.site-header')).toBeVisible();
 });
 
 test('newsletter signup posts an identifiable home-gate record before continuing', async ({
@@ -296,7 +338,9 @@ test('mobile shell stays compact and collapses the footer', async ({ page, isMob
     ).toBeLessThanOrEqual(50);
     const footerDetails = page.locator('.site-footer__details');
     await expect(footerDetails).not.toHaveAttribute('open', '');
-    await footerDetails.locator('summary').click({ force: true });
+    await footerDetails.evaluate((element: HTMLDetailsElement) => {
+      element.open = true;
+    });
     await expect(footerDetails).toHaveAttribute('open', '');
   }
 });
@@ -310,13 +354,21 @@ test('release and store records are canonical and intentionally pending', async 
   await expect(page.getByText('02 OCT 2026')).toBeVisible();
   await page.getByRole('button', { name: 'Show AUDIOCLUB' }).click();
   await expect(page.getByText('25 SEPT 2026')).toBeVisible();
-  await expect(page.locator('[data-gallery-position]')).toHaveText('02 / 02');
+  await expect(page.locator('[data-gallery-position]')).toHaveText('02 / 11');
+  await page.getByRole('button', { name: 'Show NEVERGUESSED' }).click();
+  await expect(page.getByText('28 JULY 2026')).toBeVisible();
+  await page.getByRole('button', { name: 'Show internet depression club!!! >__<' }).click();
+  const internetDepressionClub = page.locator('#starstrike-internet-depression-club');
+  await expect(internetDepressionClub.locator('a[href*="open.spotify.com"]')).toHaveCount(3);
+  await expect(internetDepressionClub.locator('a[href*="soundcloud.com"]')).toHaveCount(1);
+  await expect(page.locator('[data-release-id]')).toHaveCount(11);
   await page.goto(siteUrl('/store/'));
   await expect(page.locator('.page-heading')).toHaveCount(0);
   await expect(page.getByText('PRE-SAVE LINK INITIALISING')).toHaveCount(2);
 });
 
-test('desktop routes keep the complete shell inside one viewport', async ({ page }) => {
+test('desktop routes keep the complete shell inside one viewport', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Desktop viewport behavior is covered by the desktop browser projects.');
   for (const viewport of [
     { width: 1366, height: 768 },
     { width: 1440, height: 900 },

@@ -9,6 +9,7 @@ export type ThemeMode = {
 
 export const THEME_STORAGE_KEY = 'lifesteal.theme';
 export const THEME_ACCENT_STORAGE_KEY = 'lifesteal.accent';
+export const THEME_BACKGROUND_STORAGE_KEY = 'lifesteal.logoBackground';
 
 const solid = (command: string, name: string, color: string, rain: readonly string[] = [color]) =>
   ({
@@ -136,7 +137,7 @@ const colourTokens: Record<string, string> = {
 };
 
 const aliases: Record<string, string> = {
-  DEFAULT: 'BI',
+  DEFAULT: 'GREEN',
   BISEXUAL: 'BI',
   PANSEXUAL: 'PAN',
   TRANSGENDER: 'TRANS',
@@ -183,8 +184,8 @@ export function resolveThemeCommand(value: string): ThemeMode | undefined {
 }
 
 export function findThemeByName(name: string | null): ThemeMode {
-  if (!name) return themeModes.BI!;
-  return resolveThemeCommand(name) ?? themeModes.BI!;
+  if (!name) return themeModes.GREEN!;
+  return resolveThemeCommand(name) ?? themeModes.GREEN!;
 }
 
 export function applyTheme(mode: ThemeMode, persist = true): void {
@@ -196,6 +197,7 @@ export function applyTheme(mode: ThemeMode, persist = true): void {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, mode.command);
       localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
+      localStorage.setItem(THEME_BACKGROUND_STORAGE_KEY, logoBackground(mode));
     } catch {
       // A denied storage write should not stop the visual theme from changing.
     }
@@ -214,8 +216,22 @@ export function applyStoredTheme(): ThemeMode {
   applyTheme(mode, false);
   try {
     localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
+    localStorage.setItem(THEME_BACKGROUND_STORAGE_KEY, logoBackground(mode));
   } catch {
     // The resolved theme still applies when storage cannot be updated.
   }
+  return mode;
+}
+
+export function resetTheme(): ThemeMode {
+  const mode = themeModes.GREEN!;
+  try {
+    localStorage.removeItem(THEME_STORAGE_KEY);
+    localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
+    localStorage.setItem(THEME_BACKGROUND_STORAGE_KEY, logoBackground(mode));
+  } catch {
+    // Reset still applies when storage is unavailable.
+  }
+  applyTheme(mode, false);
   return mode;
 }

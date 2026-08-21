@@ -39,3 +39,16 @@ const navigation = [
     </nav>
   </div>
 </header>
+
+<script>
+  const updateCurrentPage = () => {
+    const current = new URL(window.location.href).pathname;
+    document.querySelectorAll<HTMLAnchorElement>('.site-nav a').forEach((link) => {
+      const path = new URL(link.href).pathname;
+      link.toggleAttribute('aria-current', current.startsWith(path));
+      if (link.hasAttribute('aria-current')) link.setAttribute('aria-current', 'page');
+    });
+  };
+
+  document.addEventListener('astro:page-load', updateCurrentPage);
+</script>

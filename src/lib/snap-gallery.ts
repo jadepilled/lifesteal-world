@@ -125,8 +125,12 @@ export function setupSnapGallery(root: HTMLElement) {
     queueUpdate();
   });
   resizeObserver.observe(viewport);
-  document.addEventListener('astro:before-swap', () => {
-    cancelAnimationFrame(animationFrame);
-    resizeObserver.disconnect();
-  });
+  document.addEventListener(
+    'astro:before-swap',
+    () => {
+      cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+    },
+    { once: true },
+  );
 }

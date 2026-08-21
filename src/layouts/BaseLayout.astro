@@ -8,6 +8,7 @@ import '@fontsource/ibm-plex-mono/600.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import NewsletterGate from '../components/NewsletterGate.astro';
+import { ClientRouter } from 'astro:transitions';
 import { withBase } from '../lib/base';
 import '../styles/global.css';
 
@@ -56,24 +57,39 @@ const socialImage = new URL(withBase(image), Astro.site);
     <script is:inline>
       try {
         const accent = localStorage.getItem('lifesteal.accent');
+        const logoBackground = localStorage.getItem('lifesteal.logoBackground');
         if (accent && /^#[\da-f]{6}$/i.test(accent)) {
           document.documentElement.style.setProperty('--accent', accent);
         }
+        if (logoBackground && /^(?:linear|radial)-gradient\(/i.test(logoBackground)) {
+          document.documentElement.style.setProperty('--site-logo-background', logoBackground);
+        }
       } catch {
-        // The BI fallback remains in place when storage is unavailable.
+        // The green fallback remains in place when storage is unavailable.
+      }
+      if (window.matchMedia('(max-width: 900px)').matches && document.startViewTransition) {
+        try {
+          Object.defineProperty(document, 'startViewTransition', {
+            value: undefined,
+            configurable: true,
+          });
+        } catch {
+          // Astro's animated fallback remains available when the native API cannot be overridden.
+        }
       }
     </script>
+    <ClientRouter fallback="animate" />
     <title>{pageTitle}</title>
   </head>
   <body data-page={page}>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="screen-texture" aria-hidden="true"></div>
-    {page !== 'store' && <Header />}
+    <Header transition:persist="site-header" />
     <main id="main-content" class:list={['site-main', mainClass]}>
       <slot />
     </main>
-    <Footer showRule={page !== 'home'} />
-    <NewsletterGate />
+    <Footer transition:persist="site-footer" />
+    <NewsletterGate transition:persist="newsletter-gate" />
     <script>
       import { applyStoredTheme } from '../lib/theme';
 

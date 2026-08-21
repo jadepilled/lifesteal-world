@@ -76,7 +76,11 @@ const galleryStyle = initialPalette
 <script>
   import { setupSnapGallery } from '../lib/snap-gallery';
 
-  document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
+  const setupReleases = () => {
+    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
+  };
+
+  document.addEventListener('astro:page-load', setupReleases);
 </script>
 
 <style>
@@ -142,7 +146,7 @@ const galleryStyle = initialPalette
     padding: 0 14px;
     border-top: 1px solid color-mix(in srgb, var(--gallery-accent), transparent 65%);
     background: color-mix(in srgb, var(--gallery-surface), #000 36%);
-    color: color-mix(in srgb, var(--gallery-foreground), transparent 48%);
+    color: color-mix(in srgb, var(--gallery-foreground), transparent 22%);
     font-size: 9px;
     letter-spacing: 0.09em;
     gap: 18px;
@@ -150,8 +154,15 @@ const galleryStyle = initialPalette
 
   .snap-gallery__markers {
     display: flex;
+    min-width: 0;
     align-items: stretch;
     align-self: stretch;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .snap-gallery__markers::-webkit-scrollbar {
+    display: none;
   }
 
   .snap-gallery__markers button {
@@ -171,15 +182,15 @@ const galleryStyle = initialPalette
   }
 
   .snap-gallery__controls output {
-    color: var(--gallery-accent);
+    color: var(--gallery-foreground);
     text-shadow: 0 0 8px color-mix(in srgb, var(--gallery-glow), transparent 35%);
   }
 
   @media (max-width: 900px) {
     .release-gallery {
-      height: calc(100svh - var(--header-height) - 70px);
-      min-height: 0;
-      flex: none;
+      height: auto;
+      min-height: calc(100svh - var(--header-height) - var(--mobile-footer-height));
+      flex: 1;
     }
 
     .release-slide {

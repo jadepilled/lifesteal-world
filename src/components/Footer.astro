@@ -1,11 +1,5 @@
 ---
 import { withBase } from '../lib/base';
-
-interface Props {
-  showRule?: boolean;
-}
-
-const { showRule = true } = Astro.props;
 ---
 
 <footer class="site-footer" itemscope itemtype="https://schema.org/Organization">
@@ -13,7 +7,6 @@ const { showRule = true } = Astro.props;
   <meta itemprop="foundingDate" content="2021" />
   <meta itemprop="address" content="Naarm, Australia" />
 
-  {showRule && <div class="site-footer__rule" aria-hidden="true" />}
   <details class="site-footer__details">
     <summary>ACKNOWLEDGEMENT / COPYRIGHT <span aria-hidden="true">[+]</span></summary>
     <div class="site-footer__content">
@@ -45,7 +38,4 @@ const { showRule = true } = Astro.props;
   };
   syncFooter();
   desktopFooter.addEventListener('change', syncFooter);
-  document.addEventListener('astro:before-swap', () => {
-    desktopFooter.removeEventListener('change', syncFooter);
-  });
 </script>

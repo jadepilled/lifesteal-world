@@ -66,5 +66,441 @@
         "fetchedAt": null
       }
     ]
+  },
+  {
+    "canonicalId": "starstrike-song-of-the-seas",
+    "title": "song of the seas",
+    "version": null,
+    "artistIds": ["starstrike"],
+    "album": "song of the seas",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-04-18",
+    "durationMs": 184529,
+    "isrc": null,
+    "biography": "A self-produced piratecore transmission: oceanic fantasy, bright digital abrasion, and starstrike’s sense of melody held inside a compact hyperpop structure.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-song-of-the-seas.webp",
+      "alt": "Cover artwork for song of the seas by starstrike",
+      "source": "soundcloud"
+    },
+    "palette": {
+      "background": "#060707",
+      "surface": "#18191a",
+      "foreground": "#f8f6f1",
+      "accent": "#c9f7ff",
+      "glow": "#d4f9ff"
+    },
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/song-of-the-seas",
+        "platformId": "1252377295"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 983,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "soundcloud",
+        "sourceId": "1252377295",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "starstrike-shut-up-n-kiss-me",
+    "title": "shut up n kiss me",
+    "version": null,
+    "artistIds": ["starstrike"],
+    "album": "shut up n kiss me",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-08-25",
+    "durationMs": 147513,
+    "isrc": null,
+    "biography": "A direct, sugar-rush crush song that sets airy processed vocals against the speed and clipped impact of starstrike’s club-facing production.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-shut-up-n-kiss-me.webp",
+      "alt": "Cover artwork for shut up n kiss me by starstrike",
+      "source": "soundcloud"
+    },
+    "palette": {
+      "background": "#150c0e",
+      "surface": "#271e20",
+      "foreground": "#f8f6f1",
+      "accent": "#fff7ea",
+      "glow": "#fff9ee"
+    },
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/shut-up-n-kiss-me",
+        "platformId": "1331156944"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 1466,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "soundcloud",
+        "sourceId": "1331156944",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "starstrike-starwrld",
+    "title": "starwrld",
+    "version": "prod. nightclub20xx",
+    "artistIds": ["starstrike"],
+    "album": "starwrld",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-07-04",
+    "durationMs": 143125,
+    "isrc": null,
+    "biography": "Produced with nightclub20xx, starwrld compresses scene-era nostalgia into a fast, bass-heavy digital rush without losing its soft-edged vocal centre.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-starwrld.webp",
+      "alt": "Cover artwork for starwrld by starstrike",
+      "source": "soundcloud"
+    },
+    "palette": {
+      "background": "#000000",
+      "surface": "#131313",
+      "foreground": "#f8f6f1",
+      "accent": "#54a37b",
+      "glow": "#76b696"
+    },
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/starwrld-prod-nightclub20xx",
+        "platformId": "1299416821"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 2990,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "soundcloud",
+        "sourceId": "1299416821",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "hazelmere-neverguessed",
+    "title": "NEVERGUESSED",
+    "version": null,
+    "artistIds": ["hazelmere"],
+    "album": "NEVERGUESSED",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2026-07-28",
+    "durationMs": 116318,
+    "isrc": null,
+    "biography": "HAZELMERE folds a restless, high-speed electronic arrangement around a sharply melodic core, balancing emotional lift with deliberate overload.",
+    "artwork": {
+      "src": "/assets/releases/hazelmere-neverguessed.webp",
+      "alt": "Cover artwork for NEVERGUESSED by HAZELMERE",
+      "source": "soundcloud"
+    },
+    "palette": {
+      "background": "#060606",
+      "surface": "#191919",
+      "foreground": "#f8f6f1",
+      "accent": "#13b8f6",
+      "glow": "#43c6f8"
+    },
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/neverguessed",
+        "platformId": "2369425946"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 160,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "soundcloud",
+        "sourceId": "2369425946",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "starstrike-katana",
+    "title": "katana",
+    "version": null,
+    "artistIds": ["starstrike"],
+    "album": "katana",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-11-04",
+    "durationMs": 149002,
+    "isrc": null,
+    "biography": "A compact hyperpop cut built from hard transients, suspended vocals, and the collision between romantic digital atmosphere and physical low-end pressure.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-katana.webp",
+      "alt": "Cover artwork for katana by starstrike",
+      "source": "soundcloud"
+    },
+    "palette": {
+      "background": "#000000",
+      "surface": "#131313",
+      "foreground": "#f8f6f1",
+      "accent": "#8f7789",
+      "glow": "#a692a1"
+    },
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/katana",
+        "platformId": "1376256559"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 582,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "soundcloud",
+        "sourceId": "1376256559",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "starstrike-echoes-of-hoenn",
+    "title": "echoes of hoenn",
+    "version": null,
+    "artistIds": ["starstrike"],
+    "album": "echoes of hoenn",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-07-23",
+    "durationMs": 79412,
+    "isrc": null,
+    "biography": "A brief memory-piece in which game-world nostalgia is treated less as quotation than atmosphere: luminous, compressed, and already disappearing.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-echoes-of-hoenn.webp",
+      "alt": "Cover artwork for echoes of hoenn by starstrike",
+      "source": "soundcloud"
+    },
+    "palette": {
+      "background": "#131c0f",
+      "surface": "#252d21",
+      "foreground": "#f8f6f1",
+      "accent": "#9bffc0",
+      "glow": "#afffcc"
+    },
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/echoes-of-hoenn",
+        "platformId": "1310476963"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 346,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "soundcloud",
+        "sourceId": "1310476963",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "starstrike-the-one-that-got-away",
+    "title": "the one that got away",
+    "version": "with hauntingclaire / w6lker",
+    "artistIds": ["starstrike"],
+    "album": "the one that got away",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-04-03",
+    "durationMs": 121182,
+    "isrc": null,
+    "biography": "A tightly framed collaboration that lets yearning vocals and weightless melodic detail carry the track before its harder rhythmic edges close back in.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-the-one-that-got-away.webp",
+      "alt": "Cover artwork for the one that got away by starstrike",
+      "source": "spotify"
+    },
+    "palette": {
+      "background": "#000000",
+      "surface": "#131313",
+      "foreground": "#f8f6f1",
+      "accent": "#ababab",
+      "glow": "#bcbcbc"
+    },
+    "links": [
+      {
+        "platform": "spotify",
+        "url": "https://open.spotify.com/track/00641hz6e2MgdUcmtabYNm",
+        "platformId": "00641hz6e2MgdUcmtabYNm"
+      },
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/the-one-that-got-away",
+        "platformId": "1243602877"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 1666,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "spotify",
+        "sourceId": "00641hz6e2MgdUcmtabYNm",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      },
+      {
+        "source": "soundcloud",
+        "sourceId": "1243602877",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "starstrike-internet-depression-club",
+    "title": "internet depression club!!! >__<",
+    "version": null,
+    "artistIds": ["starstrike"],
+    "album": "internet depression club!!! >__<",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-01-20",
+    "durationMs": 124996,
+    "isrc": null,
+    "biography": "Scenecore melancholy rendered as a bright browser-window rush: oversaturated hooks, digitally exposed emotion, and momentum that barely contains either.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-internet-depression-club.webp",
+      "alt": "Cover artwork for internet depression club by starstrike",
+      "source": "spotify"
+    },
+    "palette": {
+      "background": "#04040b",
+      "surface": "#17161d",
+      "foreground": "#f8f6f1",
+      "accent": "#7e7fcb",
+      "glow": "#9799d5"
+    },
+    "links": [
+      {
+        "platform": "spotify",
+        "url": "https://open.spotify.com/track/7zVToCOmfS1dfz9M4eIKC9",
+        "platformId": "7zVToCOmfS1dfz9M4eIKC9"
+      },
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/internet-depression-club",
+        "platformId": "1199892184"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 3591,
+        "asOf": "2026-08-21T03:30:00.000Z"
+      }
+    ],
+    "provenance": [
+      {
+        "source": "spotify",
+        "sourceId": "7zVToCOmfS1dfz9M4eIKC9",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      },
+      {
+        "source": "soundcloud",
+        "sourceId": "1199892184",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
+  },
+  {
+    "canonicalId": "starstrike-flow",
+    "title": "flow",
+    "version": null,
+    "artistIds": ["starstrike"],
+    "album": "flow",
+    "releaseType": "single",
+    "status": "released",
+    "releaseDate": "2022-03-31",
+    "durationMs": null,
+    "isrc": null,
+    "biography": "A softer starstrike transmission that lets melody and processed vocal texture lead, retaining the project’s Y2K digital patina without crowding the frame.",
+    "artwork": {
+      "src": "/assets/releases/starstrike-flow.webp",
+      "alt": "Cover artwork for flow by starstrike",
+      "source": "spotify"
+    },
+    "palette": {
+      "background": "#0c0912",
+      "surface": "#1f1c24",
+      "foreground": "#f8f6f1",
+      "accent": "#cbe299",
+      "glow": "#d5e8ad"
+    },
+    "links": [
+      {
+        "platform": "spotify",
+        "url": "https://open.spotify.com/track/0fEazO7AwSWNHOu0NoriiO",
+        "platformId": "0fEazO7AwSWNHOu0NoriiO"
+      }
+    ],
+    "metrics": [],
+    "provenance": [
+      {
+        "source": "spotify",
+        "sourceId": "0fEazO7AwSWNHOu0NoriiO",
+        "fetchedAt": "2026-08-21T03:30:00.000Z"
+      }
+    ]
   }
 ]

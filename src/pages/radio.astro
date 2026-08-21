@@ -136,8 +136,9 @@ const initialTrack = radioTracks[0];
     artwork?: string;
   };
 
-  const consoleElement = document.querySelector<HTMLElement>('[data-radio-console]');
-  if (consoleElement?.dataset.enabled === 'true') {
+  const setupRadio = () => {
+    const consoleElement = document.querySelector<HTMLElement>('[data-radio-console]');
+    if (consoleElement?.dataset.enabled !== 'true') return;
     const audio = consoleElement.querySelector<HTMLAudioElement>('[data-radio-audio]');
     const toggle = consoleElement.querySelector<HTMLButtonElement>('[data-radio-toggle]');
     const volume = consoleElement.querySelector<HTMLInputElement>('[data-radio-volume]');
@@ -258,11 +259,17 @@ const initialTrack = radioTracks[0];
     if (audio && volume) audio.volume = Number(volume.value);
     refreshMetadata();
     metadataTimer = window.setInterval(refreshMetadata, 10_000);
-    document.addEventListener('astro:before-swap', () => {
-      window.clearInterval(metadataTimer);
-      hls?.destroy();
-    });
-  }
+    document.addEventListener(
+      'astro:before-swap',
+      () => {
+        window.clearInterval(metadataTimer);
+        hls?.destroy();
+      },
+      { once: true },
+    );
+  };
+
+  document.addEventListener('astro:page-load', setupRadio);
 </script>
 
 <style>

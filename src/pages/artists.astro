@@ -168,24 +168,28 @@ const galleryStyle = initialPalette
 <script>
   import { setupSnapGallery } from '../lib/snap-gallery';
 
-  document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
-  document.querySelectorAll<HTMLElement>('.artist-slide').forEach((slide) => {
-    const buttons = [...slide.querySelectorAll<HTMLButtonElement>('[data-artist-panel-button]')];
-    const panels = [...slide.querySelectorAll<HTMLElement>('[data-artist-panel]')];
-    buttons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const requested = button.dataset.artistPanelButton;
-        const willOpen = button.getAttribute('aria-expanded') !== 'true';
-        buttons.forEach((candidate) => candidate.setAttribute('aria-expanded', 'false'));
-        panels.forEach((panel) => delete panel.dataset.open);
-        if (willOpen && requested) {
-          button.setAttribute('aria-expanded', 'true');
-          const panel = panels.find((candidate) => candidate.dataset.artistPanel === requested);
-          if (panel) panel.dataset.open = 'true';
-        }
+  const setupArtists = () => {
+    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
+    document.querySelectorAll<HTMLElement>('.artist-slide').forEach((slide) => {
+      const buttons = [...slide.querySelectorAll<HTMLButtonElement>('[data-artist-panel-button]')];
+      const panels = [...slide.querySelectorAll<HTMLElement>('[data-artist-panel]')];
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const requested = button.dataset.artistPanelButton;
+          const willOpen = button.getAttribute('aria-expanded') !== 'true';
+          buttons.forEach((candidate) => candidate.setAttribute('aria-expanded', 'false'));
+          panels.forEach((panel) => delete panel.dataset.open);
+          if (willOpen && requested) {
+            button.setAttribute('aria-expanded', 'true');
+            const panel = panels.find((candidate) => candidate.dataset.artistPanel === requested);
+            if (panel) panel.dataset.open = 'true';
+          }
+        });
       });
     });
-  });
+  };
+
+  document.addEventListener('astro:page-load', setupArtists);
 </script>
 
 <style>
@@ -364,7 +368,7 @@ const galleryStyle = initialPalette
     padding: 0 14px;
     border-top: 1px solid color-mix(in srgb, var(--gallery-accent), transparent 65%);
     background: color-mix(in srgb, var(--gallery-surface), #000 36%);
-    color: color-mix(in srgb, var(--gallery-foreground), transparent 48%);
+    color: color-mix(in srgb, var(--gallery-foreground), transparent 22%);
     font-size: 9px;
     letter-spacing: 0.09em;
     gap: 18px;
@@ -393,7 +397,7 @@ const galleryStyle = initialPalette
   }
 
   .snap-gallery__controls output {
-    color: var(--gallery-accent);
+    color: var(--gallery-foreground);
     text-shadow: 0 0 8px color-mix(in srgb, var(--gallery-glow), transparent 35%);
   }
 
@@ -405,9 +409,9 @@ const galleryStyle = initialPalette
 
   @media (max-width: 900px) {
     .artist-gallery {
-      height: calc(100svh - var(--header-height) - 70px);
-      min-height: 0;
-      flex: none;
+      height: auto;
+      min-height: calc(100svh - var(--header-height) - var(--mobile-footer-height));
+      flex: 1;
     }
 
     .artist-slide {
@@ -466,12 +470,27 @@ const galleryStyle = initialPalette
     }
 
     .artist-slide__panel {
-      display: none;
-      padding-top: 16px;
+      max-height: 0;
+      padding-top: 0;
+      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-5px);
+      transition:
+        max-height 420ms cubic-bezier(0.2, 0.72, 0.22, 1),
+        padding-top 260ms ease,
+        opacity 220ms ease,
+        transform 260ms ease,
+        visibility 0s linear 420ms;
     }
 
     .artist-slide__panel[data-open='true'] {
-      display: block;
+      max-height: min(58svh, 560px);
+      padding-top: 16px;
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      transition-delay: 0s;
     }
 
     .artist-meta {

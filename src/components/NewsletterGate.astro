@@ -49,6 +49,8 @@ const endpoint =
 </dialog>
 
 <script>
+  import { navigate } from 'astro:transitions/client';
+
   const gate = document.querySelector<HTMLDialogElement>('[data-newsletter-gate]');
   const form = gate?.querySelector<HTMLFormElement>('[data-newsletter-form]');
   const email = gate?.querySelector<HTMLInputElement>('[data-newsletter-email]');
@@ -76,12 +78,12 @@ const endpoint =
   const continueToTarget = () => {
     if (navigating || !pendingHref) return;
     navigating = true;
-    window.location.assign(pendingHref);
+    navigate(pendingHref);
   };
 
   const openGate = (href: string) => {
     if (!gate) {
-      window.location.assign(href);
+      navigate(href);
       return;
     }
     pendingHref = href;
@@ -92,7 +94,7 @@ const endpoint =
 
   const requestNavigation = (href: string) => {
     if (document.body.dataset.page !== 'home' || hasBeenSeen()) {
-      window.location.assign(href);
+      navigate(href);
       return;
     }
     openGate(href);

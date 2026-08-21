@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { findThemeByName, logoBackground, resolveThemeCommand } from '../src/lib/theme';
 
 describe('terminal theme commands', () => {
-  it('uses the bisexual palette when no saved command exists', () => {
+  it('uses the green palette when no saved command exists', () => {
     const theme = findThemeByName(null);
-    expect(theme.name).toBe('bisexual');
-    expect(theme.accent).toBe('#d60270');
+    expect(theme.name).toBe('green');
+    expect(theme.accent).toBe('#2de37b');
   });
 
   it('preserves ordered and repeated colours in custom gradients', () => {

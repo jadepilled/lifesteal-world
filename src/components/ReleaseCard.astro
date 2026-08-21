@@ -12,7 +12,10 @@ interface Props {
 const { release, index } = Astro.props;
 const creditedArtists = releaseArtists(release.artistIds);
 const spotifyLink = release.links.find((link) => link.platform === 'spotify');
-const artworkDestination = spotifyLink?.url;
+const artworkSourceLink = release.links.find((link) => link.platform === release.artwork.source);
+const artworkDestination = artworkSourceLink?.url ?? spotifyLink?.url ?? release.links[0]?.url;
+const artworkPlatform =
+  artworkSourceLink?.platform ?? spotifyLink?.platform ?? release.links[0]?.platform;
 const artworkSrc = withBase(release.artwork.src);
 const responsiveArtwork =
   release.artwork.src.startsWith('/assets/releases/') && release.artwork.src.endsWith('.webp')
@@ -40,7 +43,7 @@ const paletteStyle = [
           href={artworkDestination}
           target="_blank"
           rel="noreferrer"
-          aria-label={`Open ${release.title} on Spotify`}
+          aria-label={`Open ${release.title} on ${artworkPlatform ?? 'its release platform'}`}
         >
           <img
             class="release-card__artwork"
@@ -79,6 +82,7 @@ const paletteStyle = [
       {creditedArtists.map((artist) => artist.displayName).join(' + ')}
     </p>
     <AsciiTitle text={release.title} accent="var(--release-accent)" />
+    {release.version && <p class="release-card__version">{release.version}</p>}
     <dl class="release-card__meta">
       <div>
         <dt>FORMAT</dt>
@@ -123,11 +127,12 @@ const paletteStyle = [
     </ul>
 
     {
-      release.artwork.source === 'spotify' && spotifyLink && (
+      ['spotify', 'soundcloud'].includes(release.artwork.source) && artworkSourceLink && (
         <p class="release-card__attribution">
-          Artwork and metadata supplied by Spotify.{' '}
-          <a href={spotifyLink.url} target="_blank" rel="noreferrer">
-            Open in Spotify
+          Artwork and metadata supplied by{' '}
+          {release.artwork.source === 'spotify' ? 'Spotify' : 'SoundCloud'}.{' '}
+          <a href={artworkSourceLink.url} target="_blank" rel="noreferrer">
+            Open in {release.artwork.source === 'spotify' ? 'Spotify' : 'SoundCloud'}
           </a>
           .
         </p>
@@ -204,6 +209,14 @@ const paletteStyle = [
     color: var(--release-accent);
     font-size: 12px;
     letter-spacing: 0.12em;
+  }
+
+  .release-card__version {
+    margin: -8px 0 12px;
+    color: color-mix(in srgb, var(--release-accent), var(--release-fg) 34%);
+    font-size: 9px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
   }
 
   .release-card__meta {
