@@ -32,7 +32,6 @@ jobs:
 
       - name: Run browser and accessibility checks
         run: npm run test:e2e -- --project=chromium
-      - run: npm run test:lighthouse
 
       - name: Upload browser reports on failure
         if: failure()
@@ -43,5 +42,50 @@ jobs:
             playwright-report
             test-results
             .lighthouseci
+          if-no-files-found: ignore
+          retention-days: 7
+
+  lighthouse:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: home
+            path: ''
+          - name: artists
+            path: artists/
+          - name: releases
+            path: releases/
+          - name: radio
+            path: radio/
+          - name: store
+            path: store/
+          - name: about
+            path: about/
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Audit ${{ matrix.name }}
+        env:
+          LHCI_URL: http://localhost/${{ matrix.path }}
+        run: npm run test:lighthouse
+
+      - name: Upload Lighthouse report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-${{ matrix.name }}
+          path: .lighthouseci
           if-no-files-found: ignore
           retention-days: 7
