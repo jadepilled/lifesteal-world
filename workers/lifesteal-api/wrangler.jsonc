@@ -1,0 +1,25 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "lifesteal-signal-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-21",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+  },
+  "triggers": {
+    "crons": ["0 */6 * * *"],
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://lifesteal.world,https://www.lifesteal.world,https://jadepilled.github.io,http://127.0.0.1:4321,http://localhost:4321",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lifesteal-signal",
+      "database_id": "a1f01bab-263b-41a3-bd13-242c1bc81578",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

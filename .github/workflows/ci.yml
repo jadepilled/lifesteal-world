@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run check
+      - run: npm run worker:check
       - run: npm test
       - run: npm run build
 

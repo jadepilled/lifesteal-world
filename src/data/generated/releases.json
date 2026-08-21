@@ -23,13 +23,31 @@
       "accent": "#f02b31",
       "glow": "#ff3840"
     },
-    "links": [],
-    "metrics": [],
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/audioclub",
+        "platformId": "2367911003"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 1614,
+        "asOf": "2026-08-21T04:11:31.000Z"
+      }
+    ],
     "provenance": [
       {
         "source": "local",
         "sourceId": "hazelmere-audioclub",
         "fetchedAt": null
+      },
+      {
+        "source": "soundcloud",
+        "sourceId": "2367911003",
+        "fetchedAt": "2026-08-21T04:11:31.000Z"
       }
     ]
   },
@@ -57,13 +75,31 @@
       "accent": "#dda6ef",
       "glow": "#f4a6ef"
     },
-    "links": [],
-    "metrics": [],
+    "links": [
+      {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/lifeisbeautiful",
+        "platformId": "2379855369"
+      }
+    ],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 210,
+        "asOf": "2026-08-21T04:11:31.000Z"
+      }
+    ],
     "provenance": [
       {
         "source": "local",
         "sourceId": "hazelmere-life-is-beautiful",
         "fetchedAt": null
+      },
+      {
+        "source": "soundcloud",
+        "sourceId": "2379855369",
+        "fetchedAt": "2026-08-21T04:11:31.000Z"
       }
     ]
   },

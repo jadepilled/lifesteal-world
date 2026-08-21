@@ -18,7 +18,11 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium firefox webkit",
-    "test:lighthouse": "lhci autorun"
+    "test:lighthouse": "lhci autorun",
+    "worker:check": "tsc -p workers/lifesteal-api/tsconfig.json",
+    "worker:dev": "wrangler dev --config workers/lifesteal-api/wrangler.jsonc",
+    "worker:migrate": "wrangler d1 migrations apply DB --remote --config workers/lifesteal-api/wrangler.jsonc",
+    "worker:deploy": "wrangler deploy --config workers/lifesteal-api/wrangler.jsonc"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.3",
@@ -32,6 +36,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.10",
     "@axe-core/playwright": "4.13.0",
+    "@cloudflare/workers-types": "4.20260702.1",
     "@lhci/cli": "0.15.1",
     "@playwright/test": "1.62.1",
     "@types/figlet": "^1.7.0",
@@ -40,6 +45,7 @@
     "prettier-plugin-astro": "0.14.1",
     "tsx": "4.23.12",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "wrangler": "4.95.0"
   }
 }

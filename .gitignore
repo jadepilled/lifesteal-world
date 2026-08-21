@@ -7,4 +7,7 @@ coverage/
 .lighthouseci/
 .env
 .env.*
+.dev.vars
+.dev.vars.*
+.wrangler/
 *.log

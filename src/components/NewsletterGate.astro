@@ -1,24 +1,23 @@
 ---
+import AsciiTitle from './AsciiTitle.astro';
+
 const endpoint =
-  import.meta.env.PUBLIC_NEWSLETTER_ENDPOINT ?? 'https://newsletter.lifesteal.world/subscribe';
+  import.meta.env.PUBLIC_NEWSLETTER_ENDPOINT ??
+  'https://lifesteal-signal-api.jade-431.workers.dev/subscribe';
 ---
 
-<dialog class="newsletter-gate" data-newsletter-gate aria-labelledby="newsletter-gate-title">
+<dialog class="newsletter-gate" data-newsletter-gate aria-label="ACCESS GRANTED">
   <form class="newsletter-gate__panel" data-newsletter-form data-endpoint={endpoint}>
-    <div class="newsletter-gate__status" aria-hidden="true">
-      <span>INTERRUPT // MAILING LIST</span>
-      <span>OPTIONAL</span>
-    </div>
     <button
       class="newsletter-gate__close"
       type="button"
       data-newsletter-dismiss
       aria-label="Dismiss newsletter signup">×</button
     >
-    <p class="newsletter-gate__eyebrow">ONE TRANSMISSION PER ERA</p>
-    <h2 id="newsletter-gate-title">intercept the signal.</h2>
+    <AsciiTitle text="ACCESS GRANTED" accent="var(--accent)" class="newsletter-gate__ascii" />
     <p class="newsletter-gate__copy">
-      New releases, broadcasts and label transmissions. Sparse by design; leave whenever you want.
+      Be first to hear about LIFESTEAL's new releases, shows and exclusive merch! Unsubscribe at any
+      time.
     </p>
     <label class="newsletter-gate__label" for="newsletter-email">EMAIL ADDRESS</label>
     <div class="newsletter-gate__field">
@@ -39,7 +38,9 @@ const endpoint =
       <input name="company" type="text" tabindex="-1" autocomplete="off" />
     </label>
     <div class="newsletter-gate__actions">
-      <button class="terminal-button newsletter-gate__submit" type="submit">JOIN SIGNAL</button>
+      <button class="terminal-button newsletter-gate__submit" type="submit"
+        >JOIN MAILING LIST</button
+      >
       <button class="newsletter-gate__skip" type="button" data-newsletter-dismiss>
         CONTINUE WITHOUT SIGNING UP
       </button>
@@ -51,13 +52,8 @@ const endpoint =
 <script>
   import { navigate } from 'astro:transitions/client';
 
-  const gate = document.querySelector<HTMLDialogElement>('[data-newsletter-gate]');
-  const form = gate?.querySelector<HTMLFormElement>('[data-newsletter-form]');
-  const email = gate?.querySelector<HTMLInputElement>('[data-newsletter-email]');
-  const response = gate?.querySelector<HTMLElement>('[data-newsletter-response]');
   const seenKey = 'lifesteal.newsletterGateSeen';
-  let pendingHref = '';
-  let navigating = false;
+  const pendingKey = 'lifesteal.newsletterGatePending';
 
   const markSeen = () => {
     try {
@@ -75,21 +71,44 @@ const endpoint =
     }
   };
 
-  const continueToTarget = () => {
-    if (navigating || !pendingHref) return;
-    navigating = true;
-    navigate(pendingHref);
+  const markPending = () => {
+    try {
+      sessionStorage.setItem(pendingKey, 'true');
+    } catch {
+      // If storage is denied, navigation still proceeds without blocking.
+    }
   };
 
-  const openGate = (href: string) => {
-    if (!gate) {
-      navigate(href);
-      return;
+  const consumePending = () => {
+    try {
+      const pending = sessionStorage.getItem(pendingKey) === 'true';
+      sessionStorage.removeItem(pendingKey);
+      return pending;
+    } catch {
+      return false;
     }
-    pendingHref = href;
+  };
+
+  const openGateAfterLoad = () => {
+    if (!consumePending()) return;
+    window.setTimeout(() => {
+      const activeGate = document.querySelector<HTMLDialogElement>('[data-newsletter-gate]');
+      const activeEmail = activeGate?.querySelector<HTMLInputElement>('[data-newsletter-email]');
+      const activeForm = activeGate?.querySelector<HTMLFormElement>('[data-newsletter-form]');
+      if (!activeGate || activeGate.open) return;
+      if (activeForm && activeForm.dataset.submitBound !== 'true') {
+        activeForm.dataset.submitBound = 'true';
+        activeForm.addEventListener('submit', handleNewsletterSubmit);
+      }
+      activeGate.showModal();
+      window.setTimeout(() => activeEmail?.focus(), 80);
+    }, 70);
+  };
+
+  const navigateWithGate = (href: string) => {
     markSeen();
-    gate.showModal();
-    window.setTimeout(() => email?.focus(), 80);
+    markPending();
+    navigate(href);
   };
 
   const requestNavigation = (href: string) => {
@@ -97,7 +116,7 @@ const endpoint =
       navigate(href);
       return;
     }
-    openGate(href);
+    navigateWithGate(href);
   };
 
   document.addEventListener(
@@ -115,7 +134,7 @@ const endpoint =
         return;
       }
       event.preventDefault();
-      openGate(destination.href);
+      navigateWithGate(destination.href);
     },
     { capture: true },
   );
@@ -124,18 +143,34 @@ const endpoint =
     const href = (event as CustomEvent<{ href?: string }>).detail?.href;
     if (href) requestNavigation(new URL(href, window.location.href).href);
   });
+  document.addEventListener('astro:page-load', openGateAfterLoad);
 
-  gate?.querySelectorAll<HTMLElement>('[data-newsletter-dismiss]').forEach((button) => {
-    button.addEventListener('click', () => gate.close('dismissed'));
+  document.addEventListener('click', (event) => {
+    const dismiss =
+      event.target instanceof Element ? event.target.closest('[data-newsletter-dismiss]') : null;
+    if (!dismiss) return;
+    document.querySelector<HTMLDialogElement>('[data-newsletter-gate]')?.close('dismissed');
   });
-  gate?.addEventListener('cancel', (event) => {
+  document.addEventListener('cancel', (event) => {
+    const activeGate = event.target;
+    if (
+      !(activeGate instanceof HTMLDialogElement) ||
+      !activeGate.matches('[data-newsletter-gate]')
+    ) {
+      return;
+    }
     event.preventDefault();
-    gate.close('dismissed');
+    activeGate.close('dismissed');
   });
-  gate?.addEventListener('close', continueToTarget);
 
-  form?.addEventListener('submit', async (event) => {
+  async function handleNewsletterSubmit(event: SubmitEvent) {
+    if (event.defaultPrevented) return;
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches('[data-newsletter-form]')) return;
     event.preventDefault();
+    const activeGate = form.closest<HTMLDialogElement>('[data-newsletter-gate]');
+    const email = form.querySelector<HTMLInputElement>('[data-newsletter-email]');
+    const response = form.querySelector<HTMLElement>('[data-newsletter-response]');
     if (!email || !response) return;
     const submit = form.querySelector<HTMLButtonElement>('[type="submit"]');
     const honeypot = form.elements.namedItem('company');
@@ -157,12 +192,14 @@ const endpoint =
       });
       if (!result.ok) throw new Error('Signup failed');
       response.textContent = 'SIGNAL RECEIVED // SUBSCRIBED';
-      window.setTimeout(() => gate?.close('subscribed'), 650);
+      window.setTimeout(() => activeGate?.close('subscribed'), 650);
     } catch {
       response.textContent = 'SIGNAL FAILED // TRY AGAIN OR CONTINUE';
       if (submit) submit.disabled = false;
     }
-  });
+  }
+
+  document.addEventListener('submit', handleNewsletterSubmit);
 </script>
 
 <style>
@@ -194,15 +231,6 @@ const endpoint =
       );
   }
 
-  .newsletter-gate__status {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: clamp(34px, 6vw, 58px);
-    color: var(--muted);
-    font-size: 9px;
-    letter-spacing: 0.11em;
-  }
-
   .newsletter-gate__close {
     position: absolute;
     top: 28px;
@@ -219,20 +247,20 @@ const endpoint =
     place-items: center;
   }
 
-  .newsletter-gate__eyebrow,
   .newsletter-gate__label {
     color: var(--accent);
     font-size: 10px;
     letter-spacing: 0.12em;
   }
 
-  .newsletter-gate h2 {
-    margin: 5px 0 18px;
-    font-family: var(--display);
-    font-size: clamp(48px, 9vw, 82px);
-    font-weight: 900;
-    line-height: 0.82;
-    letter-spacing: -0.055em;
+  .newsletter-gate :global(.newsletter-gate__ascii) {
+    width: calc(100% - 42px);
+    margin: 5px 0 22px;
+  }
+
+  .newsletter-gate :global(.newsletter-gate__ascii pre) {
+    margin: 0;
+    font-size: clamp(3.5px, calc(100cqw / var(--ascii-title-columns) * 1.5), 8px);
   }
 
   .newsletter-gate__copy {
@@ -300,10 +328,6 @@ const endpoint =
   @media (max-width: 540px) {
     .newsletter-gate__panel {
       padding: 22px;
-    }
-
-    .newsletter-gate__status span:last-child {
-      display: none;
     }
 
     .newsletter-gate__close {

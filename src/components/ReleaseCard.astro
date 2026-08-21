@@ -99,19 +99,24 @@ const paletteStyle = [
     </dl>
     <p class="release-card__biography">{release.biography}</p>
 
-    {
-      release.metrics.length > 0 && (
-        <ul class="release-card__metrics" aria-label="Platform metrics">
-          {release.metrics.map((metric) => (
-            <li>
-              <span>{metric.platform.toUpperCase()} PLAYS</span>
-              <strong>{new Intl.NumberFormat('en-AU').format(metric.value)}</strong>
-              <small>AS OF {new Date(metric.asOf).toLocaleDateString('en-AU')}</small>
-            </li>
-          ))}
-        </ul>
-      )
-    }
+    <ul
+      class="release-card__metrics"
+      aria-label="Platform metrics"
+      data-release-metrics
+      hidden={release.metrics.length === 0}
+    >
+      {
+        release.metrics.map((metric) => (
+          <li data-platform-metric data-platform={metric.platform} data-kind={metric.kind}>
+            <span data-metric-label>{metric.platform.toUpperCase()} PLAYS</span>
+            <strong data-metric-value>{new Intl.NumberFormat('en-AU').format(metric.value)}</strong>
+            <small data-metric-date>
+              AS OF {new Date(metric.asOf).toLocaleDateString('en-AU')}
+            </small>
+          </li>
+        ))
+      }
+    </ul>
 
     <ul class="release-card__links" aria-label={`${release.title} platform links`}>
       {

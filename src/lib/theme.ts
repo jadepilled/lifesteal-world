@@ -1,3 +1,5 @@
+import colourCatalogue from '../data/colours.json';
+
 export type ThemeMode = {
   name: string;
   command: string;
@@ -8,6 +10,7 @@ export type ThemeMode = {
 };
 
 export const THEME_STORAGE_KEY = 'lifesteal.theme';
+export const THEME_NAME_STORAGE_KEY = 'lifesteal.themeName';
 export const THEME_ACCENT_STORAGE_KEY = 'lifesteal.accent';
 export const THEME_BACKGROUND_STORAGE_KEY = 'lifesteal.logoBackground';
 
@@ -105,7 +108,26 @@ export const themeModes: Record<string, ThemeMode> = {
   },
 };
 
-const colourTokens: Record<string, string> = {
+type CatalogueColour = { name: string; hex: string };
+
+const normaliseColourName = (value: string) =>
+  value
+    .trim()
+    .toUpperCase()
+    .replace(/&/g, ' AND ')
+    .replace(/[()\[\]{}]/g, ' ')
+    .replace(/[-_/]+/g, ' ')
+    .replace(/[^A-Z0-9\s]/g, '')
+    .replace(/\s+/g, ' ');
+
+const catalogueTokens = Object.fromEntries(
+  (colourCatalogue as CatalogueColour[]).map(({ name, hex }) => [
+    normaliseColourName(name),
+    hex.toLowerCase(),
+  ]),
+);
+
+const brandColourTokens: Record<string, string> = {
   WHITE: '#f7f7f5',
   BLACK: '#050505',
   RED: '#ff304f',
@@ -136,6 +158,21 @@ const colourTokens: Record<string, string> = {
   PEACH: '#ffb38a',
 };
 
+// The supplied catalogue gives the terminal broad colour-name coverage. Brand colours
+// intentionally win for the familiar short commands so existing saved themes stay stable.
+export const colourTokens: Readonly<Record<string, string>> = {
+  ...catalogueTokens,
+  ...brandColourTokens,
+};
+
+export const COLOUR_CATALOGUE_SIZE = Object.keys(catalogueTokens).length;
+
+const colourPhrases = Object.keys(colourTokens)
+  .map((name) => ({ name, words: name.split(' ') }))
+  .sort(
+    (left, right) => right.words.length - left.words.length || left.name.localeCompare(right.name),
+  );
+
 const aliases: Record<string, string> = {
   DEFAULT: 'GREEN',
   BISEXUAL: 'BI',
@@ -144,8 +181,62 @@ const aliases: Record<string, string> = {
   LGBT: 'RAINBOW',
   PRIDE: 'RAINBOW',
   INDIGENOUS: 'ABORIGINAL',
-  GREY: 'WHITE',
-  GRAY: 'WHITE',
+};
+
+const mixHex = (source: string, target: string, weight: number) => {
+  const channel = (value: string, offset: number) =>
+    Number.parseInt(value.slice(offset, offset + 2), 16);
+  const mixed = [1, 3, 5].map((offset) =>
+    Math.round(channel(source, offset) * (1 - weight) + channel(target, offset) * weight)
+      .toString(16)
+      .padStart(2, '0'),
+  );
+  return `#${mixed.join('')}`;
+};
+
+const modifyColour = (colour: string, modifier?: 'LIGHT' | 'DARK') => {
+  if (modifier === 'LIGHT') return mixHex(colour, '#ffffff', 0.36);
+  if (modifier === 'DARK') return mixHex(colour, '#000000', 0.42);
+  return colour;
+};
+
+type ParsedColour = { label: string; value: string };
+
+const parseColourSequence = (submitted: string): ParsedColour[] | undefined => {
+  const words = normaliseColourName(submitted).split(' ').filter(Boolean);
+  const parsed: ParsedColour[] = [];
+  let cursor = 0;
+
+  while (cursor < words.length) {
+    const possibleModifier = words[cursor];
+    const modifier =
+      possibleModifier === 'LIGHT' || possibleModifier === 'DARK' ? possibleModifier : undefined;
+    if (modifier) cursor += 1;
+    if (cursor >= words.length) return undefined;
+
+    // A standalone colour token is a gradient stop. This keeps commands such as
+    // `RED BLUE GREEN` unambiguous even though the catalogue also contains names
+    // such as “blue-green”. Multi-word names still work when their first word is
+    // not itself a complete colour (for example `ROBIN EGG BLUE`).
+    const match = colourTokens[words[cursor]!]
+      ? colourPhrases.find(
+          ({ words: phrase }) => phrase.length === 1 && phrase[0] === words[cursor],
+        )
+      : colourPhrases.find(({ words: phrase }) =>
+          phrase.every((word, index) => words[cursor + index] === word),
+        );
+    if (!match) return undefined;
+
+    const base = colourTokens[match.name];
+    if (!base) return undefined;
+    parsed.push({
+      label: modifier ? `${modifier} ${match.name}` : match.name,
+      value: modifyColour(base, modifier),
+    });
+    cursor += match.words.length;
+  }
+
+  return parsed.length > 0 ? parsed : undefined;
 };
 
 const makeGradient = (colors: readonly string[]) => {
@@ -163,18 +254,18 @@ const modeByName = (value: string) =>
   Object.values(themeModes).find((mode) => mode.name.toUpperCase() === value.toUpperCase());
 
 export function resolveThemeCommand(value: string): ThemeMode | undefined {
-  const submitted = value.trim().toUpperCase().replace(/\s+/g, ' ');
+  const submitted = normaliseColourName(value);
   if (!submitted) return undefined;
   const alias = aliases[submitted] ?? submitted;
   const named = themeModes[alias] ?? modeByName(alias);
   if (named) return named;
 
-  const tokens = submitted.split(' ');
-  const colors = tokens.map((token) => colourTokens[aliases[token] ?? token]);
-  if (colors.some((color) => !color)) return undefined;
-  const resolved = colors as string[];
+  const colors = parseColourSequence(submitted);
+  if (!colors) return undefined;
+  const resolved = colors.map(({ value: colour }) => colour);
   return {
-    name: tokens.length === 1 ? tokens[0]!.toLowerCase() : 'custom-gradient',
+    name:
+      colors.length === 1 ? colors[0]!.label.toLowerCase().replace(/\s+/g, '-') : 'custom-gradient',
     command: submitted,
     accent: resolved[0]!,
     logo: resolved,
@@ -196,6 +287,7 @@ export function applyTheme(mode: ThemeMode, persist = true): void {
   if (persist) {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, mode.command);
+      localStorage.setItem(THEME_NAME_STORAGE_KEY, mode.name);
       localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
       localStorage.setItem(THEME_BACKGROUND_STORAGE_KEY, logoBackground(mode));
     } catch {
@@ -217,6 +309,7 @@ export function applyStoredTheme(): ThemeMode {
   try {
     localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
     localStorage.setItem(THEME_BACKGROUND_STORAGE_KEY, logoBackground(mode));
+    localStorage.setItem(THEME_NAME_STORAGE_KEY, mode.name);
   } catch {
     // The resolved theme still applies when storage cannot be updated.
   }
@@ -227,6 +320,7 @@ export function resetTheme(): ThemeMode {
   const mode = themeModes.GREEN!;
   try {
     localStorage.removeItem(THEME_STORAGE_KEY);
+    localStorage.setItem(THEME_NAME_STORAGE_KEY, mode.name);
     localStorage.setItem(THEME_ACCENT_STORAGE_KEY, mode.accent);
     localStorage.setItem(THEME_BACKGROUND_STORAGE_KEY, logoBackground(mode));
   } catch {

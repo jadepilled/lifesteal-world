@@ -58,6 +58,10 @@ const socialImage = new URL(withBase(image), Astro.site);
       try {
         const accent = localStorage.getItem('lifesteal.accent');
         const logoBackground = localStorage.getItem('lifesteal.logoBackground');
+        const themeName = localStorage.getItem('lifesteal.themeName') || 'green';
+        if (/^[a-z0-9-]+$/i.test(themeName)) {
+          document.documentElement.dataset.theme = themeName;
+        }
         if (accent && /^#[\da-f]{6}$/i.test(accent)) {
           document.documentElement.style.setProperty('--accent', accent);
         }
@@ -90,10 +94,5 @@ const socialImage = new URL(withBase(image), Astro.site);
     </main>
     <Footer transition:persist="site-footer" />
     <NewsletterGate transition:persist="newsletter-gate" />
-    <script>
-      import { applyStoredTheme } from '../lib/theme';
-
-      applyStoredTheme();
-    </script>
   </body>
 </html>

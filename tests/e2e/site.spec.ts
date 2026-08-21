@@ -41,7 +41,7 @@ test('landing presents the ASCII signal and respects reduced motion', async ({ p
   await page.goto(siteUrl('/'));
   await expect(page.getByRole('heading', { name: 'LIFESTEAL' })).toBeVisible();
   await expect(page.locator('[data-ascii-logo]')).toBeVisible();
-  await expect(page.locator('[data-ascii-output]')).toContainText('___ ____');
+  await expect(page.locator('[data-ascii-logo] [data-ascii-output]')).toContainText('___ ____');
   await expect(page.getByText('LIFESTEAL // HOME')).toHaveCount(0);
   await expect(page.getByText('FOUNDED 2021')).toHaveCount(0);
   await expect(page.getByText('INDEPENDENT AUDIO // NAARM')).toBeVisible();
@@ -125,7 +125,7 @@ test('terminal text aligns with its prompt and persisted flag themes clip throug
   await expect
     .poll(() =>
       page
-        .locator('[data-ascii-output]')
+        .locator('[data-ascii-logo] [data-ascii-output]')
         .evaluate((element) => getComputedStyle(element).backgroundImage),
     )
     .toContain('rgb(91, 206, 250)');
@@ -135,7 +135,7 @@ test('terminal text aligns with its prompt and persisted flag themes clip throug
   await expect
     .poll(() =>
       page
-        .locator('[data-ascii-output]')
+        .locator('[data-ascii-logo] [data-ascii-output]')
         .evaluate((element) => getComputedStyle(element).backgroundImage),
     )
     .toContain('rgb(255, 207, 0)');
@@ -198,8 +198,8 @@ test('home navigation shows the newsletter gate only once per site visit', async
     await terminal.fill('artists');
     await terminal.press('Enter');
   }
-  await expect(page.getByRole('dialog', { name: 'intercept the signal.' })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`${sitePath}/?$`));
+  await expect(page).toHaveURL(/\/artists\/(?:#.*)?$/);
+  await expect(page.getByRole('dialog', { name: 'ACCESS GRANTED' })).toBeVisible();
   await page.getByRole('button', { name: 'CONTINUE WITHOUT SIGNING UP' }).click();
   await expect(page).toHaveURL(/\/artists\/(?:#.*)?$/);
 
@@ -251,7 +251,7 @@ test('client navigation keeps the shared shell and reinitializes the landing ter
   await expect(page.locator('.wordmark')).toBeVisible();
   await page.locator('.wordmark').click();
   await expect(page).toHaveURL(new RegExp(`${sitePath}/?$`));
-  await expect(page.locator('[data-ascii-output]')).toContainText('___ ____');
+  await expect(page.locator('[data-ascii-logo] [data-ascii-output]')).toContainText('___ ____');
   await expect(page.locator('.site-header')).toBeVisible();
 });
 
@@ -260,14 +260,16 @@ test('newsletter signup posts an identifiable home-gate record before continuing
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   let submitted: Record<string, string> = {};
-  await page.route('https://newsletter.lifesteal.world/subscribe', async (route) => {
+  await page.route('https://lifesteal-signal-api.jade-431.workers.dev/subscribe', async (route) => {
     submitted = route.request().postDataJSON() as Record<string, string>;
     await route.fulfill({ status: 201, contentType: 'application/json', body: '{"ok":true}' });
   });
   await page.goto(siteUrl('/'));
   await page.locator(`nav a[href="${siteUrl('/radio/')}"]`).click();
+  await expect(page).toHaveURL(/\/radio\/$/);
+  await expect(page.getByRole('dialog', { name: 'ACCESS GRANTED' })).toBeVisible();
   await page.getByLabel('EMAIL ADDRESS').fill('listener@example.com');
-  await page.getByRole('button', { name: 'JOIN SIGNAL' }).click();
+  await page.getByRole('button', { name: 'JOIN MAILING LIST' }).click();
   await expect(page.getByText('SIGNAL RECEIVED // SUBSCRIBED')).toBeVisible();
   expect(submitted).toMatchObject({
     email: 'listener@example.com',
@@ -365,6 +367,30 @@ test('release and store records are canonical and intentionally pending', async 
   await page.goto(siteUrl('/store/'));
   await expect(page.locator('.page-heading')).toHaveCount(0);
   await expect(page.getByText('PRE-SAVE LINK INITIALISING')).toHaveCount(2);
+});
+
+test('release cards replace timestamped fallbacks with live Worker metrics', async ({ page }) => {
+  await page.route('https://lifesteal-signal-api.jade-431.workers.dev/metrics', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        metrics: [
+          {
+            canonicalId: 'hazelmere-life-is-beautiful',
+            platform: 'soundcloud',
+            kind: 'plays',
+            value: 4321,
+            asOf: '2026-08-21T04:30:00.000Z',
+          },
+        ],
+      }),
+    });
+  });
+  await page.goto(siteUrl('/releases/'));
+  const release = page.locator('[data-release-id="hazelmere-life-is-beautiful"]');
+  await expect(release.locator('[data-metric-value]')).toHaveText('4,321');
+  await expect(release.locator('[data-metric-date]')).toContainText('21/08/2026');
 });
 
 test('desktop routes keep the complete shell inside one viewport', async ({ page, isMobile }) => {

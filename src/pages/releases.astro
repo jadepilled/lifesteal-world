@@ -13,6 +13,9 @@ const galleryStyle = initialPalette
       `--gallery-glow:${initialPalette.glow}`,
     ].join(';')
   : undefined;
+const metricsEndpoint =
+  import.meta.env.PUBLIC_METRICS_ENDPOINT ??
+  'https://lifesteal-signal-api.jade-431.workers.dev/metrics';
 ---
 
 <BaseLayout
@@ -23,6 +26,7 @@ const galleryStyle = initialPalette
   <section
     class="snap-gallery release-gallery panel"
     data-gallery
+    data-metrics-endpoint={metricsEndpoint}
     aria-label="LIFESTEAL releases"
     tabindex="0"
     style={galleryStyle}
@@ -76,8 +80,73 @@ const galleryStyle = initialPalette
 <script>
   import { setupSnapGallery } from '../lib/snap-gallery';
 
+  type LiveMetric = {
+    canonicalId: string;
+    platform: string;
+    kind: 'plays' | 'popularity';
+    value: number;
+    asOf: string;
+  };
+
+  const metricLabel = (metric: LiveMetric) =>
+    metric.kind === 'popularity'
+      ? `${metric.platform.toUpperCase()} POPULARITY`
+      : `${metric.platform.toUpperCase()} PLAYS`;
+
+  const updateMetric = (metric: LiveMetric) => {
+    const release = document.querySelector<HTMLElement>(
+      `[data-release-id="${CSS.escape(metric.canonicalId)}"]`,
+    );
+    const list = release?.querySelector<HTMLUListElement>('[data-release-metrics]');
+    if (!list || !Number.isFinite(metric.value) || metric.value < 0) return;
+    let item = list.querySelector<HTMLLIElement>(
+      `[data-platform-metric][data-platform="${CSS.escape(metric.platform)}"][data-kind="${CSS.escape(metric.kind)}"]`,
+    );
+    if (!item) {
+      item = document.createElement('li');
+      item.dataset.platformMetric = '';
+      item.dataset.platform = metric.platform;
+      item.dataset.kind = metric.kind;
+      item.innerHTML =
+        '<span data-metric-label></span><strong data-metric-value></strong><small data-metric-date></small>';
+      list.append(item);
+    }
+    const label = item.querySelector<HTMLElement>('[data-metric-label]');
+    const value = item.querySelector<HTMLElement>('[data-metric-value]');
+    const date = item.querySelector<HTMLElement>('[data-metric-date]');
+    if (label) label.textContent = metricLabel(metric);
+    if (value) {
+      value.textContent =
+        metric.kind === 'popularity'
+          ? `${metric.value}/100`
+          : new Intl.NumberFormat('en-AU').format(metric.value);
+    }
+    if (date) {
+      date.textContent = `AS OF ${new Date(metric.asOf).toLocaleDateString('en-AU')}`;
+    }
+    list.hidden = false;
+  };
+
+  const hydrateMetrics = async (gallery: HTMLElement) => {
+    if (gallery.dataset.metricsHydrated === 'true') return;
+    gallery.dataset.metricsHydrated = 'true';
+    const endpoint = gallery.dataset.metricsEndpoint;
+    if (!endpoint) return;
+    try {
+      const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { metrics?: LiveMetric[] };
+      payload.metrics?.forEach(updateMetric);
+    } catch {
+      // Static, timestamped values remain visible whenever the live endpoint is unavailable.
+    }
+  };
+
   const setupReleases = () => {
-    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
+    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
+      setupSnapGallery(gallery);
+      void hydrateMetrics(gallery);
+    });
   };
 
   document.addEventListener('astro:page-load', setupReleases);
