@@ -4,6 +4,7 @@ import artists from '../../../src/data/artists.json';
 interface Env {
   DB: D1Database;
   ALLOWED_ORIGINS: string;
+  RADIO_ORIGIN?: string;
   SOUNDCLOUD_CLIENT_ID?: string;
   SOUNDCLOUD_CLIENT_SECRET?: string;
   SPOTIFY_CLIENT_ID?: string;
@@ -71,6 +72,53 @@ const withCors = (response: Response, request: Request, env: Env) => {
     status: response.status,
     statusText: response.statusText,
     headers,
+  });
+};
+
+const radioProxy = async (
+  request: Request,
+  env: Env,
+  resource: 'metadata' | 'stream' | 'artwork',
+) => {
+  if (!env.RADIO_ORIGIN)
+    return json({ ok: false, error: 'Radio origin unavailable' }, { status: 503 });
+  const sourcePath =
+    resource === 'metadata'
+      ? '/now-playing.json'
+      : resource === 'stream'
+        ? '/stream.mp3'
+        : new URL(request.url).pathname.replace(/^\/radio/u, '');
+  const target = new URL(sourcePath, env.RADIO_ORIGIN);
+  const headers = new Headers();
+  const range = request.headers.get('Range');
+  if (range) headers.set('Range', range);
+  headers.set('User-Agent', 'LIFESTEAL-radio-edge/1.0');
+  const upstream = await fetch(target, {
+    method: 'GET',
+    headers,
+    redirect: 'follow',
+    cf: { cacheTtl: resource === 'artwork' ? 86_400 : 0 },
+  });
+  const responseHeaders = new Headers();
+  for (const name of [
+    'Content-Type',
+    'Content-Length',
+    'Content-Range',
+    'Accept-Ranges',
+    'Icy-Br',
+    'Icy-Description',
+    'Icy-Genre',
+    'Icy-Name',
+  ]) {
+    const value = upstream.headers.get(name);
+    if (value) responseHeaders.set(name, value);
+  }
+  responseHeaders.set('Cache-Control', 'no-store');
+  responseHeaders.set('X-Content-Type-Options', 'nosniff');
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: responseHeaders,
   });
 };
 
@@ -518,6 +566,12 @@ export default {
     let response: Response;
     if (request.method === 'GET' && url.pathname === '/health') {
       response = json({ ok: true, service: 'lifesteal-signal-api' });
+    } else if (request.method === 'GET' && url.pathname === '/radio/now-playing.json') {
+      response = await radioProxy(request, env, 'metadata');
+    } else if (request.method === 'GET' && url.pathname === '/radio/stream.mp3') {
+      response = await radioProxy(request, env, 'stream');
+    } else if (request.method === 'GET' && url.pathname.startsWith('/radio/artwork/')) {
+      response = await radioProxy(request, env, 'artwork');
     } else if (request.method === 'GET' && url.pathname === '/metrics') {
       response = await metrics(env);
     } else if (request.method === 'POST' && url.pathname === '/subscribe') {

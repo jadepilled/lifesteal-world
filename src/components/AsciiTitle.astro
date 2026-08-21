@@ -71,13 +71,20 @@ const columns = Math.max(...ascii.split('\n').map((line) => line.length), 1);
         this.observer.observe(this);
       }
       window.addEventListener('lifesteal:ascii-title', this.handleUpdate);
+      this.addEventListener('lifesteal:ascii-replay', this.handleReplay);
     }
 
     disconnectedCallback() {
       cancelAnimationFrame(this.frame);
       this.observer?.disconnect();
       window.removeEventListener('lifesteal:ascii-title', this.handleUpdate);
+      this.removeEventListener('lifesteal:ascii-replay', this.handleReplay);
     }
+
+    private handleReplay = () => {
+      this.visible = true;
+      this.reducedMotion.matches ? this.renderComplete() : this.play();
+    };
 
     private handleUpdate = (event: Event) => {
       const detail = (event as CustomEvent<{ id?: string; text?: string }>).detail;

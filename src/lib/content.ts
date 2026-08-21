@@ -17,7 +17,7 @@ export const releases = generatedReleasesSchema
     if (!left.releaseDate && !right.releaseDate) return left.title.localeCompare(right.title);
     if (!left.releaseDate) return -1;
     if (!right.releaseDate) return 1;
-    return right.releaseDate.localeCompare(left.releaseDate);
+    return left.releaseDate.localeCompare(right.releaseDate);
   });
 export const presaves = presavesSchema.parse(presaveData);
 export const radioTracks = radioTracksSchema

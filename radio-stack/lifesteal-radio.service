@@ -1,0 +1,24 @@
+[Unit]
+Description=LIFESTEAL continuous radio source
+After=network-online.target icecast2.service
+Wants=network-online.target
+Requires=icecast2.service
+
+[Service]
+Type=simple
+User=lifesteal-radio
+Group=lifesteal-radio
+EnvironmentFile=/etc/lifesteal-radio.env
+ExecStart=/usr/bin/node /opt/lifesteal-radio/broadcaster.mjs
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/lifesteal-radio/public
+MemoryMax=192M
+CPUQuota=65%
+
+[Install]
+WantedBy=multi-user.target

@@ -25,15 +25,37 @@ export function setupSnapGallery(root: HTMLElement) {
   const desktop = window.matchMedia('(min-width: 901px)');
   if (!viewport || slides.length === 0) return;
 
-  let active = 0;
+  let active = -1;
   let animationFrame = 0;
+  let revealFrame = 0;
 
   const slidePalette = (slide: HTMLElement, key: PaletteKey) =>
     slide.dataset[`gallery${key[0]?.toUpperCase()}${key.slice(1)}` as keyof DOMStringMap] ??
     '#000000';
 
+  const replaySlide = (slide: HTMLElement) => {
+    slide.querySelectorAll<HTMLElement>('ascii-title').forEach((title) => {
+      title.dispatchEvent(new CustomEvent('lifesteal:ascii-replay'));
+    });
+    const revealables = [
+      ...slide.querySelectorAll<HTMLElement>(
+        ':is(p, dd, dt, li, small, .eyebrow, [data-gallery-cascade])',
+      ),
+    ].filter((element) => !element.closest('pre, [data-ascii-stage]'));
+    revealables.forEach((element, index) => {
+      element.classList.remove('body-type-fill');
+      element.style.setProperty('--type-fill-delay', `${Math.min(index * 24, 360)}ms`);
+    });
+    cancelAnimationFrame(revealFrame);
+    revealFrame = requestAnimationFrame(() => {
+      revealables.forEach((element) => element.classList.add('body-type-fill'));
+    });
+  };
+
   const setPosition = (index: number, updateHash = true) => {
-    active = Math.max(0, Math.min(slides.length - 1, index));
+    const nextActive = Math.max(0, Math.min(slides.length - 1, index));
+    const changed = nextActive !== active;
+    active = nextActive;
     root.dataset.galleryActive = String(active);
     markers.forEach((marker, markerIndex) => {
       marker.toggleAttribute('aria-current', markerIndex === active);
@@ -41,6 +63,26 @@ export function setupSnapGallery(root: HTMLElement) {
     });
     if (position) {
       position.value = `${String(active + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+    }
+    if (changed) {
+      slides.forEach((slide, slideIndex) => {
+        const current = slideIndex === active;
+        slide.toggleAttribute('inert', !current);
+        slide.setAttribute('aria-hidden', current ? 'false' : 'true');
+        if (current) {
+          delete slide.dataset.galleryVisible;
+          void slide.offsetWidth;
+          slide.dataset.galleryVisible = 'true';
+          replaySlide(slide);
+        } else {
+          delete slide.dataset.galleryVisible;
+        }
+      });
+      root.dispatchEvent(
+        new CustomEvent('lifesteal:gallery-slide-active', {
+          detail: { index: active, slide: slides[active] },
+        }),
+      );
     }
     const id = slides[active]?.dataset.galleryId;
     if (updateHash && id && window.location.hash !== `#${id}`) {
@@ -57,6 +99,11 @@ export function setupSnapGallery(root: HTMLElement) {
       slide.style.setProperty('--gallery-slide-opacity', String(1 - distance * 0.5));
       slide.style.setProperty('--gallery-slide-blur', `${distance * 3.5}px`);
       slide.style.setProperty('--gallery-slide-scale', String(1 - distance * 0.012));
+      slide.style.setProperty(
+        '--gallery-content-opacity',
+        String(Math.max(0, 1 - distance * 1.35)),
+      );
+      slide.style.setProperty('--gallery-content-shift', `${distance * 16}px`);
     });
     const fromIndex = Math.floor(progress);
     const toIndex = Math.min(slides.length - 1, Math.ceil(progress));
@@ -135,6 +182,7 @@ export function setupSnapGallery(root: HTMLElement) {
     'astro:before-swap',
     () => {
       cancelAnimationFrame(animationFrame);
+      cancelAnimationFrame(revealFrame);
       resizeObserver.disconnect();
     },
     { once: true },

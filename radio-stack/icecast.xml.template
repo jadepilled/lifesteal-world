@@ -1,0 +1,48 @@
+<icecast>
+  <location>Naarm</location>
+  <admin>hello@lifesteal.world</admin>
+  <limits>
+    <clients>160</clients>
+    <sources>2</sources>
+    <queue-size>524288</queue-size>
+    <client-timeout>30</client-timeout>
+    <header-timeout>15</header-timeout>
+    <source-timeout>10</source-timeout>
+    <burst-on-connect>1</burst-on-connect>
+    <burst-size>65535</burst-size>
+  </limits>
+  <authentication>
+    <source-password>__SOURCE_PASSWORD__</source-password>
+    <relay-password>__RELAY_PASSWORD__</relay-password>
+    <admin-user>admin</admin-user>
+    <admin-password>__ADMIN_PASSWORD__</admin-password>
+  </authentication>
+  <hostname>radio.lifesteal.world</hostname>
+  <listen-socket>
+    <bind-address>127.0.0.1</bind-address>
+    <port>8000</port>
+  </listen-socket>
+  <mount type="normal">
+    <mount-name>/stream.mp3</mount-name>
+    <public>0</public>
+    <max-listeners>150</max-listeners>
+    <fallback-override>1</fallback-override>
+  </mount>
+  <fileserve>0</fileserve>
+  <paths>
+    <logdir>/var/log/icecast2</logdir>
+    <webroot>/usr/share/icecast2/web</webroot>
+    <adminroot>/usr/share/icecast2/admin</adminroot>
+    <pidfile>/run/icecast2/icecast2.pid</pidfile>
+    <alias source="/" destination="/status.xsl"/>
+  </paths>
+  <logging>
+    <accesslog>access.log</accesslog>
+    <errorlog>error.log</errorlog>
+    <loglevel>2</loglevel>
+    <logsize>10000</logsize>
+  </logging>
+  <security>
+    <chroot>0</chroot>
+  </security>
+</icecast>

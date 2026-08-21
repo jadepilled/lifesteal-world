@@ -190,22 +190,22 @@ h3 {
 .wordmark {
   position: relative;
   display: grid;
-  width: clamp(170px, 15vw, 220px);
+  width: auto;
   overflow: hidden;
   color: var(--white);
   text-decoration: none;
   text-shadow: none;
 }
 
-.wordmark pre {
+.wordmark__base,
+.wordmark__prism {
   grid-area: 1 / 1;
-  width: max-content;
-  margin: 0;
-  font-family: var(--mono);
-  font-size: clamp(5px, 0.43vw, 6.4px);
-  font-weight: 700;
-  line-height: 1;
-  white-space: pre;
+  font-family: var(--display);
+  font-size: clamp(25px, 2.2vw, 32px);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
 }
 
 .wordmark__base {
@@ -269,6 +269,66 @@ h3 {
   text-shadow: none;
   -webkit-text-fill-color: transparent;
   animation: prism-sweep 11.5s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+}
+
+.accent-prism-text {
+  background-image: linear-gradient(
+    108deg,
+    var(--accent) 0%,
+    var(--accent) 38%,
+    #37eaff 45%,
+    #fff 49.5%,
+    #ff3bd7 54%,
+    #ffe36e 59%,
+    var(--accent) 66%,
+    var(--accent) 100%
+  );
+  background-position: 125% 50%;
+  background-size: 360% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 46%, transparent));
+  -webkit-text-fill-color: transparent;
+  animation: accent-prism-text-sweep 9s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
+}
+
+.accent-prism-frame {
+  position: relative;
+  isolation: isolate;
+}
+
+.accent-prism-frame::after {
+  position: absolute;
+  z-index: 3;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    108deg,
+    transparent 0%,
+    transparent 39%,
+    rgba(55, 234, 255, 0.9) 45%,
+    rgba(255, 255, 255, 0.96) 49.5%,
+    rgba(255, 59, 215, 0.88) 54%,
+    rgba(255, 227, 110, 0.82) 59%,
+    transparent 66%,
+    transparent 100%
+  );
+  background-position: 125% 50%;
+  background-size: 360% 100%;
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: accent-prism-frame-sweep 9s cubic-bezier(0.2, 0.72, 0.22, 1) infinite;
 }
 
 .site-nav {
@@ -459,6 +519,7 @@ h3 {
   --terminal-gradient: var(--site-logo-background);
   --terminal-primary: var(--red);
   position: relative;
+  container-type: inline-size;
   display: grid;
   min-height: min(70svh, 820px);
   overflow: hidden;
@@ -493,7 +554,7 @@ h3 {
   z-index: 2;
   margin: 0;
   font-family: var(--mono);
-  font-size: clamp(8px, 1.28vw, 19px);
+  font-size: clamp(6px, calc((100cqw - 34px) / var(--logo-columns) * 1.68), 23px);
   font-weight: 600;
   line-height: 1.1;
   white-space: pre;
@@ -935,6 +996,36 @@ h3 {
   }
 }
 
+@keyframes accent-prism-text-sweep {
+  0%,
+  67% {
+    background-position: 125% 50%;
+  }
+  91%,
+  100% {
+    background-position: -25% 50%;
+  }
+}
+
+@keyframes accent-prism-frame-sweep {
+  0%,
+  66%,
+  100% {
+    background-position: 125% 50%;
+    opacity: 0;
+  }
+  71% {
+    opacity: 0.95;
+  }
+  91% {
+    background-position: -25% 50%;
+    opacity: 0.95;
+  }
+  96% {
+    opacity: 0;
+  }
+}
+
 @keyframes page-surface-out {
   to {
     opacity: 0;
@@ -1041,12 +1132,13 @@ h3 {
   }
 
   .wordmark {
-    width: 118px;
+    width: auto;
     flex: none;
   }
 
-  .wordmark pre {
-    font-size: 4px;
+  .wordmark__base,
+  .wordmark__prism {
+    font-size: 22px;
   }
 
   .site-main {
@@ -1138,7 +1230,7 @@ h3 {
   }
 
   .ascii-logo {
-    font-size: clamp(5px, 2vw, 8px);
+    font-size: clamp(5px, calc((100cqw - 22px) / var(--logo-columns) * 1.68), 9px);
   }
 
   .ascii-stage__tagline {

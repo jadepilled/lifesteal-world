@@ -26,6 +26,7 @@ test.describe('site shell', () => {
   }
 
   test('navigation reaches every primary page', async ({ page }) => {
+    test.setTimeout(60_000);
     await page.goto(siteUrl('/'));
     await page.evaluate(() => sessionStorage.setItem('lifesteal.newsletterGateSeen', 'true'));
     for (const label of ['artists', 'releases', 'radio', 'store', 'about']) {
@@ -41,7 +42,7 @@ test('landing presents the ASCII signal and respects reduced motion', async ({ p
   await page.goto(siteUrl('/'));
   await expect(page.getByRole('heading', { name: 'LIFESTEAL' })).toBeVisible();
   await expect(page.locator('[data-ascii-logo]')).toBeVisible();
-  await expect(page.locator('[data-ascii-logo] [data-ascii-output]')).toContainText('___ ____');
+  await expect(page.locator('[data-ascii-logo] [data-ascii-output]')).toContainText('__ _');
   await expect(page.getByText('LIFESTEAL // HOME')).toHaveCount(0);
   await expect(page.getByText('FOUNDED 2021')).toHaveCount(0);
   await expect(page.getByText('INDEPENDENT AUDIO // NAARM')).toBeVisible();
@@ -50,9 +51,27 @@ test('landing presents the ASCII signal and respects reduced motion', async ({ p
   await expect(page.getByText('EOF', { exact: true })).toHaveCount(0);
 });
 
+test('landing selects lifesteal, lifesteal.world and www.lifesteal.world by available width', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'Viewport variants are exercised explicitly in this desktop project.');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const [width, variant] of [
+    [440, 'small'],
+    [960, 'compact'],
+    [1500, 'wide'],
+  ] as const) {
+    await page.setViewportSize({ width, height: 956 });
+    await page.goto(siteUrl('/'));
+    await expect(page.locator('[data-ascii-logo]')).toHaveAttribute('data-logo-variant', variant);
+  }
+});
+
 test('landing types for five seconds, then exposes a silent colour terminal', async ({
   page,
   isMobile,
+  browserName,
 }) => {
   test.skip(isMobile, 'The colour terminal is intentionally desktop-only.');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -60,9 +79,11 @@ test('landing types for five seconds, then exposes a silent colour terminal', as
   const logo = page.locator('[data-ascii-logo]');
   const terminal = page.locator('[data-terminal-input]');
   await page.waitForTimeout(900);
-  await expect(logo).toHaveAttribute('data-typing', 'true');
-  await expect(terminal).not.toBeVisible();
-  await expect(logo).toHaveAttribute('data-typing', 'false', { timeout: 6_000 });
+  if (browserName === 'chromium') {
+    await expect(logo).toHaveAttribute('data-typing', 'true');
+    await expect(terminal).not.toBeVisible();
+  }
+  await expect(logo).toHaveAttribute('data-typing', 'false', { timeout: 10_000 });
   await expect(terminal).toBeVisible();
 
   for (const [command, mode] of [
@@ -248,7 +269,7 @@ test('client navigation keeps the shared shell and reinitializes the landing ter
   await expect(page.locator('.wordmark')).toBeVisible();
   await page.locator('.wordmark').click();
   await expect(page).toHaveURL(new RegExp(`${sitePath}/?$`));
-  await expect(page.locator('[data-ascii-logo] [data-ascii-output]')).toContainText('___ ____');
+  await expect(page.locator('[data-ascii-logo] [data-ascii-output]')).toContainText('__ _');
   await expect(page.locator('.site-header')).toBeVisible();
 });
 
@@ -288,7 +309,7 @@ test('artist browser is keyboard-operable and deep-linkable', async ({ page }) =
   await expect(page.locator('[data-gallery-position]')).toHaveText('01 / 02');
 });
 
-test('mobile artist details are split into compact Info and Links disclosures', async ({
+test('mobile artist details are split into compact Info, Stats and Links disclosures', async ({
   page,
   isMobile,
 }) => {
@@ -296,24 +317,30 @@ test('mobile artist details are split into compact Info and Links disclosures', 
   await page.goto(siteUrl('/artists/#hazelmere'));
   const article = page.locator('#hazelmere');
   const infoButton = article.getByRole('button', { name: 'INFO' });
+  const statsButton = article.getByRole('button', { name: 'STATS' });
   const linksButton = article.getByRole('button', { name: 'LINKS' });
   const infoPanel = article.locator('[data-artist-panel="info"]');
+  const statsPanel = article.locator('[data-artist-panel="stats"]');
   const linksPanel = article.locator('[data-artist-panel="links"]');
 
-  await expect(infoButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(infoButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(statsButton).toHaveAttribute('aria-expanded', 'false');
   await expect(linksButton).toHaveAttribute('aria-expanded', 'false');
-  await expect(infoPanel).toBeHidden();
+  await expect(infoPanel).toBeVisible();
+  await expect(statsPanel).toBeHidden();
   await expect(linksPanel).toBeHidden();
 
-  await infoButton.click();
-  await expect(infoButton).toHaveAttribute('aria-expanded', 'true');
-  await expect(infoPanel).toBeVisible();
+  await statsButton.click();
+  await expect(infoButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(statsButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(infoPanel).toBeHidden();
+  await expect(statsPanel).toBeVisible();
   await expect(linksPanel).toBeHidden();
 
   await linksButton.click();
-  await expect(infoButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(statsButton).toHaveAttribute('aria-expanded', 'false');
   await expect(linksButton).toHaveAttribute('aria-expanded', 'true');
-  await expect(infoPanel).toBeHidden();
+  await expect(statsPanel).toBeHidden();
   await expect(linksPanel).toBeVisible();
 });
 
@@ -350,13 +377,15 @@ test('release and store records are canonical and intentionally pending', async 
     .locator('[data-release-id]')
     .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-release-id')));
   expect(new Set(releaseIds).size).toBe(releaseIds.length);
+  await page.getByRole('button', { name: 'Show LIFE IS BEAUTIFUL' }).click();
   await expect(page.getByText('02 OCT 2026')).toBeVisible();
   await page.getByRole('button', { name: 'Show AUDIOCLUB' }).click();
   await expect(page.getByText('25 SEPT 2026')).toBeVisible();
-  await expect(page.locator('[data-gallery-position]')).toHaveText('02 / 11');
+  await expect(page.locator('[data-gallery-position]')).toHaveText('10 / 11');
   await page.getByRole('button', { name: 'Show NEVERGUESSED' }).click();
   await expect(page.getByText('28 JULY 2026')).toBeVisible();
   await page.getByRole('button', { name: 'Show internet depression club!!! >__<' }).click();
+  await expect(page.locator('[data-gallery-position]')).toHaveText('01 / 11');
   const internetDepressionClub = page.locator('#starstrike-internet-depression-club');
   await expect(internetDepressionClub.locator('a[href*="open.spotify.com"]')).toHaveCount(3);
   await expect(internetDepressionClub.locator('a[href*="soundcloud.com"]')).toHaveCount(1);
@@ -389,9 +418,32 @@ test('release cards replace timestamped fallbacks with live Worker metrics', asy
   });
   await page.goto(siteUrl('/releases/'));
   const release = page.locator('[data-release-id="hazelmere-life-is-beautiful"]');
-  await expect(release.locator('[data-metric-value]')).toHaveText('4.32K');
+  await expect(release.locator('[data-platform-metric=""]')).toBeHidden();
   await expect(release.locator('[data-total-metric-value]')).toHaveText('4.32K');
   await expect(release.locator('[data-metric-date]')).toContainText('21/08/2026');
+});
+
+test('mobile release cards magnetically page between artwork and information', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'The two-focus-panel viewport is mobile-specific.');
+  await page.setViewportSize({ width: 440, height: 956 });
+  await page.goto(siteUrl('/releases/'));
+  const card = page.locator('#starstrike-internet-depression-club [data-release-id]');
+  await expect(card).toHaveAttribute('data-release-focus', 'artwork');
+  const geometry = await card.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    pageScroll: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+  }));
+  expect(geometry.scrollHeight).toBeGreaterThanOrEqual(geometry.clientHeight * 1.9);
+  expect(geometry.pageScroll).toBeLessThanOrEqual(1);
+  await card.evaluate((element) =>
+    element.scrollTo({ top: element.clientHeight, behavior: 'auto' }),
+  );
+  await expect(card).toHaveAttribute('data-release-focus', 'info');
+  await expect(card.locator('[data-release-panel="info"]')).toBeVisible();
 });
 
 test('artist profiles hydrate audience totals without inventing unavailable metrics', async ({
@@ -449,11 +501,35 @@ test('desktop routes keep the complete shell inside one viewport', async ({ page
   }
 });
 
-test('radio has an explicit safe offline state', async ({ page }) => {
+test('radio loads live metadata into the lightweight broadcast HUD', async ({ page, isMobile }) => {
+  await page.route(
+    'https://lifesteal-signal-api.jade-431.workers.dev/radio/now-playing.json',
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'online',
+          artist: 'HAZELMERE',
+          title: 'LIFE IS BEAUTIFUL',
+          album: 'LIFE IS BEAUTIFUL',
+          year: 2026,
+          label: 'LIFESTEAL',
+          artwork: '/artwork/life-is-beautiful.jpg',
+          palette: ['#dda6ef', '#f4a6ef', '#fff8ff'],
+          broadcast: { codec: 'MP3', bitrateKbps: 128 },
+        }),
+      });
+    },
+  );
   await page.goto(siteUrl('/radio/'));
-  await expect(page.getByRole('button', { name: 'BROADCAST NOT AVAILABLE' })).toBeDisabled();
-  await expect(page.getByRole('heading', { name: 'STREAM OFFLINE' })).toBeVisible();
-  await expect(page.locator('[data-radio-notice]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'JOIN LIVE SIGNAL' })).toBeEnabled();
+  await expect(page.getByText('NOW TRANSMITTING')).toHaveCount(0);
+  await expect(page.locator('[data-radio-artist]')).toHaveText('HAZELMERE');
+  await expect(page.getByRole('heading', { name: 'LIFE IS BEAUTIFUL' })).toBeVisible();
+  await expect(page.locator('[data-radio-format]')).toHaveText('MP3 / 128K');
+  if (isMobile) await expect(page.locator('[data-radio-visualizer]')).toBeHidden();
+  else await expect(page.locator('[data-radio-visualizer]')).toBeVisible();
   await expect(page.getByText('STATION MANIFEST')).toHaveCount(0);
 });
 

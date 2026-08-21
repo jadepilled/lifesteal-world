@@ -28,10 +28,10 @@ import { withBase } from '../lib/base';
           : undefined;
 
         return (
-          <article class="store-item" style={style}>
+          <article class="store-item accent-prism-frame" style={style}>
             <div class="store-item__register">
               <span>ITEM/{String(index + 1).padStart(3, '0')}</span>
-              <span>$0.00 AUD</span>
+              <span class="accent-prism-text">$0.00 AUD</span>
             </div>
             <img
               class="store-item__artwork"
@@ -45,12 +45,14 @@ import { withBase } from '../lib/base';
               fetchpriority={index === 0 ? 'high' : 'auto'}
             />
             <div class="store-item__copy">
-              <p class="store-item__artist">{artist?.displayName ?? 'HAZELMERE'}</p>
+              <p class="store-item__artist accent-prism-text">
+                {artist?.displayName ?? 'HAZELMERE'}
+              </p>
               <AsciiTitle text={entry.title} accent="var(--item-accent)" />
               <p>{entry.copy}</p>
               {actionable ? (
                 <a
-                  class="store-item__action"
+                  class="store-item__action accent-prism-frame"
                   href={entry.smartlinkUrl!}
                   target="_blank"
                   rel="noreferrer"
@@ -58,7 +60,7 @@ import { withBase } from '../lib/base';
                   PRE-SAVE / FREE
                 </a>
               ) : (
-                <span class="store-item__action" aria-disabled="true">
+                <span class="store-item__action accent-prism-frame" aria-disabled="true">
                   PRE-SAVE LINK INITIALISING
                 </span>
               )}
@@ -110,7 +112,6 @@ import { withBase } from '../lib/base';
 
   .store-item__register span:last-child {
     color: var(--item-accent);
-    animation: accent-prism-glow 9s ease-in-out infinite;
   }
 
   .store-item__artwork {
@@ -131,7 +132,6 @@ import { withBase } from '../lib/base';
     color: var(--item-accent);
     font-size: 11px;
     letter-spacing: 0.12em;
-    animation: accent-prism-glow 9s ease-in-out infinite;
   }
 
   .store-item__copy > p:last-of-type {

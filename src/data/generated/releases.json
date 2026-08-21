@@ -445,6 +445,12 @@
         "kind": "plays",
         "value": 1666,
         "asOf": "2026-08-21T03:30:00.000Z"
+      },
+      {
+        "platform": "spotify",
+        "kind": "plays",
+        "value": 5024,
+        "asOf": "2026-08-21T10:18:30.000Z"
       }
     ],
     "provenance": [
@@ -512,6 +518,12 @@
         "kind": "plays",
         "value": 3591,
         "asOf": "2026-08-21T03:30:00.000Z"
+      },
+      {
+        "platform": "spotify",
+        "kind": "plays",
+        "value": 4967,
+        "asOf": "2026-08-21T10:18:30.000Z"
       }
     ],
     "provenance": [
@@ -554,6 +566,11 @@
     },
     "links": [
       {
+        "platform": "soundcloud",
+        "url": "https://soundcloud.com/hazelmere/flow",
+        "platformId": "1241647363"
+      },
+      {
         "platform": "spotify",
         "url": "https://open.spotify.com/track/0fEazO7AwSWNHOu0NoriiO",
         "platformId": "0fEazO7AwSWNHOu0NoriiO"
@@ -568,7 +585,20 @@
         "url": "https://listen.tidal.com/search?q=starstrike%20flow"
       }
     ],
-    "metrics": [],
+    "metrics": [
+      {
+        "platform": "soundcloud",
+        "kind": "plays",
+        "value": 754,
+        "asOf": "2026-08-21T10:18:30.000Z"
+      },
+      {
+        "platform": "spotify",
+        "kind": "plays",
+        "value": 419,
+        "asOf": "2026-08-21T10:18:30.000Z"
+      }
+    ],
     "provenance": [
       {
         "source": "spotify",

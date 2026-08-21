@@ -59,6 +59,17 @@ describe('checked-in content', () => {
     ).toBeNull();
   });
 
+  it('retains supplied cross-platform play totals', () => {
+    const metricTotal = (id: string) =>
+      releases
+        .find((release) => release.canonicalId === id)
+        ?.metrics.filter((metric) => metric.kind === 'plays')
+        .reduce((sum, metric) => sum + metric.value, 0);
+    expect(metricTotal('starstrike-flow')).toBe(1173);
+    expect(metricTotal('starstrike-internet-depression-club')).toBe(8558);
+    expect(metricTotal('starstrike-the-one-that-got-away')).toBe(6690);
+  });
+
   it('keeps release text readable over generated surfaces', () => {
     releases.forEach((release) => {
       expect(

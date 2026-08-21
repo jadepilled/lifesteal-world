@@ -24,7 +24,7 @@ const metricsEndpoint =
   page="releases"
 >
   <section
-    class="snap-gallery release-gallery panel"
+    class="snap-gallery release-gallery panel accent-prism-frame"
     data-gallery
     data-metrics-endpoint={metricsEndpoint}
     aria-label="LIFESTEAL releases"
@@ -58,6 +58,7 @@ const metricsEndpoint =
         {
           releases.map((release, index) => (
             <button
+              class="accent-prism-frame"
               type="button"
               data-gallery-marker
               aria-label={`Show ${release.title}`}
@@ -105,6 +106,7 @@ const metricsEndpoint =
     );
     if (!item) {
       item = document.createElement('li');
+      item.className = 'accent-prism-frame';
       item.dataset.platformMetric = '';
       item.dataset.platform = metric.platform;
       item.dataset.kind = metric.kind;
@@ -112,6 +114,10 @@ const metricsEndpoint =
         '<span data-metric-label></span><strong data-metric-value></strong><small data-metric-date></small>';
       list.append(item);
     }
+    item.hidden =
+      release?.dataset.hasSpotify === 'false' &&
+      metric.platform === 'soundcloud' &&
+      metric.kind === 'plays';
     const label = item.querySelector<HTMLElement>('[data-metric-label]');
     const value = item.querySelector<HTMLElement>('[data-metric-value]');
     const date = item.querySelector<HTMLElement>('[data-metric-date]');
@@ -171,9 +177,96 @@ const metricsEndpoint =
     }
   };
 
+  const setupReleaseFocus = (gallery: HTMLElement) => {
+    const mobile = window.matchMedia('(max-width: 880px)');
+    const cards = [...gallery.querySelectorAll<HTMLElement>('[data-release-id]')];
+    const frames = new Map<HTMLElement, number>();
+
+    const replayInfo = (card: HTMLElement) => {
+      card
+        .querySelectorAll<HTMLElement>('ascii-title')
+        .forEach((title) => title.dispatchEvent(new CustomEvent('lifesteal:ascii-replay')));
+      const copy = card.querySelector<HTMLElement>('[data-release-panel="info"]');
+      const contents = copy?.querySelectorAll<HTMLElement>(':scope > *') ?? [];
+      contents.forEach((element, index) => {
+        element.classList.remove('body-type-fill');
+        element.style.setProperty('--type-fill-delay', `${Math.min(index * 28, 280)}ms`);
+      });
+      requestAnimationFrame(() =>
+        contents.forEach((element) => element.classList.add('body-type-fill')),
+      );
+    };
+
+    const updateCard = (card: HTMLElement) => {
+      frames.delete(card);
+      if (!mobile.matches) {
+        card.style.removeProperty('--release-art-opacity');
+        card.style.removeProperty('--release-info-opacity');
+        card.dataset.releaseFocus = 'info';
+        return;
+      }
+      const height = Math.max(1, card.clientHeight);
+      const progress = Math.max(0, Math.min(1, card.scrollTop / height));
+      const artworkOpacity = Math.max(0, 1 - progress * 1.65);
+      const infoOpacity = Math.max(0.12, Math.min(1, (progress - 0.16) * 1.45));
+      card.style.setProperty('--release-art-opacity', String(artworkOpacity));
+      card.style.setProperty('--release-info-opacity', String(infoOpacity));
+      const nextFocus = progress >= 0.52 ? 'info' : 'artwork';
+      if (card.dataset.releaseFocus !== nextFocus) {
+        card.dataset.releaseFocus = nextFocus;
+        if (nextFocus === 'info') replayInfo(card);
+      }
+    };
+
+    cards.forEach((card) => {
+      card.addEventListener(
+        'scroll',
+        () => {
+          if (!frames.has(card)) {
+            frames.set(
+              card,
+              requestAnimationFrame(() => updateCard(card)),
+            );
+          }
+        },
+        { passive: true },
+      );
+      card.addEventListener('keydown', (event) => {
+        if (!mobile.matches || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault();
+        card.scrollTo({
+          top: event.key === 'ArrowDown' ? card.clientHeight : 0,
+          behavior: 'smooth',
+        });
+      });
+      updateCard(card);
+    });
+
+    gallery.addEventListener('lifesteal:gallery-slide-active', (event) => {
+      const slide = (event as CustomEvent<{ slide?: HTMLElement }>).detail.slide;
+      const card = slide?.querySelector<HTMLElement>('[data-release-id]');
+      if (!card || !mobile.matches) return;
+      card.scrollTo({ top: 0, behavior: 'auto' });
+      card.dataset.releaseFocus = 'artwork';
+      updateCard(card);
+    });
+
+    const resize = () => cards.forEach(updateCard);
+    mobile.addEventListener('change', resize);
+    document.addEventListener(
+      'astro:before-swap',
+      () => {
+        frames.forEach((frame) => cancelAnimationFrame(frame));
+        mobile.removeEventListener('change', resize);
+      },
+      { once: true },
+    );
+  };
+
   const setupReleases = () => {
     document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
       setupSnapGallery(gallery);
+      setupReleaseFocus(gallery);
       void hydrateMetrics(gallery);
     });
   };
@@ -285,18 +378,34 @@ const metricsEndpoint =
   }
 
   @media (max-width: 900px) {
+    :global(body[data-page='releases']) {
+      height: 100svh;
+      min-height: 100svh;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    :global(body[data-page='releases']:has(.site-footer__details[open])) {
+      overflow-y: auto;
+    }
+
+    :global(body[data-page='releases'] .site-main) {
+      height: calc(100svh - var(--header-height) - var(--mobile-footer-height));
+      flex: 0 0 auto;
+    }
+
     .release-gallery {
-      height: auto;
-      min-height: calc(100svh - var(--header-height) - var(--mobile-footer-height));
+      height: 100%;
+      min-height: 0;
       flex: 1;
     }
 
     .release-slide {
-      overflow-y: auto;
+      overflow: hidden;
     }
 
     .release-slide :global(.release-card) {
-      height: auto;
+      height: 100%;
       min-height: 100%;
     }
 

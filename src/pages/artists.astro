@@ -26,7 +26,7 @@ const metricsEndpoint =
   page="artists"
 >
   <section
-    class="snap-gallery artist-gallery panel"
+    class="snap-gallery artist-gallery panel accent-prism-frame"
     data-gallery
     data-metrics-endpoint={metricsEndpoint}
     aria-label="LIFESTEAL artists"
@@ -51,7 +51,7 @@ const metricsEndpoint =
 
           return (
             <article
-              class="artist-slide"
+              class="artist-slide accent-prism-frame"
               id={artist.slug}
               data-gallery-slide
               data-gallery-id={artist.slug}
@@ -61,6 +61,7 @@ const metricsEndpoint =
               data-gallery-foreground={artist.palette.foreground}
               data-gallery-accent={artist.palette.accent}
               data-gallery-glow={artist.palette.glow}
+              data-panel-open="info"
               style={paletteStyle}
               aria-label={`${index + 1} of ${artists.length}: ${artist.displayName}`}
             >
@@ -80,21 +81,34 @@ const metricsEndpoint =
               </div>
 
               <div class="artist-slide__copy">
-                <span class="eyebrow">ARTIST / {String(index + 1).padStart(2, '0')}</span>
+                <span class="eyebrow accent-prism-text">
+                  ARTIST / {String(index + 1).padStart(2, '0')}
+                </span>
                 <AsciiTitle text={artist.displayName} accent="var(--artist-accent)" />
                 <div
                   class="artist-mobile-tabs"
                   aria-label={`${artist.displayName} record sections`}
                 >
                   <button
+                    class="accent-prism-frame"
                     type="button"
                     data-artist-panel-button="info"
                     aria-controls={`${artist.slug}-info`}
-                    aria-expanded="false"
+                    aria-expanded="true"
                   >
                     INFO
                   </button>
                   <button
+                    class="accent-prism-frame"
+                    type="button"
+                    data-artist-panel-button="stats"
+                    aria-controls={`${artist.slug}-stats`}
+                    aria-expanded="false"
+                  >
+                    STATS
+                  </button>
+                  <button
+                    class="accent-prism-frame"
                     type="button"
                     data-artist-panel-button="links"
                     aria-controls={`${artist.slug}-links`}
@@ -107,58 +121,70 @@ const metricsEndpoint =
                   class="artist-slide__panel artist-slide__panel--info"
                   id={`${artist.slug}-info`}
                   data-artist-panel="info"
+                  data-open="true"
+                >
+                  <dl class="artist-meta">
+                    <div>
+                      <>
+                        <dt class="accent-prism-text">ACTIVE</dt>
+                        <dd>{artist.activeYears}</dd>
+                      </>
+                    </div>
+                    <div>
+                      <>
+                        <dt class="accent-prism-text">LOCATION</dt>
+                        <dd>{artist.location}</dd>
+                      </>
+                    </div>
+                    <div>
+                      <>
+                        <dt class="accent-prism-text">GENRE</dt>
+                        <dd>{artist.genres.join(' / ')}</dd>
+                      </>
+                    </div>
+                  </dl>
+                  <p class="artist-biography">{artist.biography}</p>
+                </div>
+                <div
+                  class="artist-slide__panel artist-slide__panel--stats"
+                  id={`${artist.slug}-stats`}
+                  data-artist-panel="stats"
                 >
                   <ul class="artist-stats" aria-label={`${artist.displayName} audience statistics`}>
-                    <li>
+                    <li class="accent-prism-frame">
                       <span>TOTAL PLAYS</span>
-                      <strong data-artist-metric="totalPlays">{formatCount(totalPlays)}</strong>
+                      <strong class="accent-prism-text" data-artist-metric="totalPlays">
+                        {formatCount(totalPlays)}
+                      </strong>
                     </li>
-                    <li>
+                    <li class="accent-prism-frame">
                       <span>PLAYS (30D)</span>
-                      <strong data-artist-metric="plays30d">
+                      <strong class="accent-prism-text" data-artist-metric="plays30d">
                         {artist.metricsSnapshot.plays30d === null
                           ? 'COLLECTING'
                           : formatCount(artist.metricsSnapshot.plays30d)}
                       </strong>
                     </li>
-                    <li>
+                    <li class="accent-prism-frame">
                       <span>SOUNDCLOUD FOLLOWERS</span>
-                      <strong data-artist-metric="soundcloudFollowers">
+                      <strong class="accent-prism-text" data-artist-metric="soundcloudFollowers">
                         {artist.metricsSnapshot.soundcloudFollowers === null
                           ? '—'
                           : formatCount(artist.metricsSnapshot.soundcloudFollowers)}
                       </strong>
                     </li>
-                    <li>
+                    <li class="accent-prism-frame">
                       <span>SPOTIFY MONTHLY</span>
-                      <strong data-artist-metric="spotifyMonthlyListeners">
+                      <strong
+                        class="accent-prism-text"
+                        data-artist-metric="spotifyMonthlyListeners"
+                      >
                         {artist.metricsSnapshot.spotifyMonthlyListeners === null
                           ? '—'
                           : formatCount(artist.metricsSnapshot.spotifyMonthlyListeners)}
                       </strong>
                     </li>
                   </ul>
-                  <dl class="artist-meta">
-                    <div>
-                      <>
-                        <dt>ACTIVE</dt>
-                        <dd>{artist.activeYears}</dd>
-                      </>
-                    </div>
-                    <div>
-                      <>
-                        <dt>LOCATION</dt>
-                        <dd>{artist.location}</dd>
-                      </>
-                    </div>
-                    <div>
-                      <>
-                        <dt>GENRE</dt>
-                        <dd>{artist.genres.join(' / ')}</dd>
-                      </>
-                    </div>
-                  </dl>
-                  <p class="artist-biography">{artist.biography}</p>
                 </div>
                 <div
                   class="artist-slide__panel artist-slide__panel--links"
@@ -168,7 +194,12 @@ const metricsEndpoint =
                   <ul class="artist-links" aria-label={`${artist.displayName} links`}>
                     {artist.links.map((link) => (
                       <li>
-                        <a class="button-link" href={link.url} target="_blank" rel="noreferrer">
+                        <a
+                          class="button-link accent-prism-frame"
+                          href={link.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
                           {link.label}
                         </a>
                       </li>
@@ -187,6 +218,7 @@ const metricsEndpoint =
         {
           artists.map((artist, index) => (
             <button
+              class="accent-prism-frame"
               type="button"
               data-gallery-marker
               aria-label={`Show ${artist.displayName}`}
@@ -248,28 +280,40 @@ const metricsEndpoint =
   };
 
   const setupArtists = () => {
-    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
-      setupSnapGallery(gallery);
-      void hydrateArtistMetrics(gallery);
-    });
-    document.querySelectorAll<HTMLElement>('.artist-slide').forEach((slide) => {
+    const openPanel = (slide: HTMLElement, requested: string) => {
       const buttons = [...slide.querySelectorAll<HTMLButtonElement>('[data-artist-panel-button]')];
       const panels = [...slide.querySelectorAll<HTMLElement>('[data-artist-panel]')];
+      buttons.forEach((candidate) =>
+        candidate.setAttribute(
+          'aria-expanded',
+          candidate.dataset.artistPanelButton === requested ? 'true' : 'false',
+        ),
+      );
+      panels.forEach((panel) => {
+        if (panel.dataset.artistPanel === requested) panel.dataset.open = 'true';
+        else delete panel.dataset.open;
+      });
+      slide.dataset.panelOpen = requested;
+    };
+
+    document.querySelectorAll<HTMLElement>('.artist-slide').forEach((slide) => {
+      const buttons = [...slide.querySelectorAll<HTMLButtonElement>('[data-artist-panel-button]')];
+      openPanel(slide, 'info');
       buttons.forEach((button) => {
         button.addEventListener('click', () => {
           const requested = button.dataset.artistPanelButton;
-          const willOpen = button.getAttribute('aria-expanded') !== 'true';
-          buttons.forEach((candidate) => candidate.setAttribute('aria-expanded', 'false'));
-          panels.forEach((panel) => delete panel.dataset.open);
-          delete slide.dataset.panelOpen;
-          if (willOpen && requested) {
-            button.setAttribute('aria-expanded', 'true');
-            slide.dataset.panelOpen = requested;
-            const panel = panels.find((candidate) => candidate.dataset.artistPanel === requested);
-            if (panel) panel.dataset.open = 'true';
-          }
+          if (requested) openPanel(slide, requested);
         });
       });
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
+      gallery.addEventListener('lifesteal:gallery-slide-active', (event) => {
+        const slide = (event as CustomEvent<{ slide?: HTMLElement }>).detail.slide;
+        if (slide?.classList.contains('artist-slide')) openPanel(slide, 'info');
+      });
+      setupSnapGallery(gallery);
+      void hydrateArtistMetrics(gallery);
     });
   };
 
@@ -368,9 +412,13 @@ const metricsEndpoint =
   .artist-slide__scan {
     background: linear-gradient(
       105deg,
-      transparent 30%,
-      color-mix(in srgb, var(--artist-foreground), transparent 92%),
-      transparent 55%
+      transparent 28%,
+      color-mix(in srgb, var(--artist-accent), transparent 84%) 38%,
+      rgba(55, 234, 255, 0.14) 44%,
+      rgba(255, 255, 255, 0.17) 48%,
+      rgba(255, 59, 215, 0.14) 52%,
+      rgba(255, 227, 110, 0.12) 56%,
+      transparent 67%
     );
     background-size: 250% 100%;
     mix-blend-mode: screen;
@@ -386,15 +434,39 @@ const metricsEndpoint =
     justify-content: center;
   }
 
+  .artist-slide__image-wrap,
+  .artist-slide__copy > * {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 300ms ease,
+      transform 420ms cubic-bezier(0.2, 0.72, 0.22, 1);
+  }
+
+  .artist-slide[data-gallery-visible='true'] .artist-slide__image-wrap,
+  .artist-slide[data-gallery-visible='true'] .artist-slide__copy > * {
+    opacity: var(--gallery-content-opacity, 1);
+    transform: translateY(var(--gallery-content-shift, 0));
+  }
+
+  .artist-slide[data-gallery-visible='true'] .artist-slide__copy > :nth-child(2) {
+    transition-delay: 55ms;
+  }
+
+  .artist-slide[data-gallery-visible='true'] .artist-slide__copy > :nth-child(3) {
+    transition-delay: 100ms;
+  }
+
+  .artist-slide[data-gallery-visible='true'] .artist-slide__copy > :nth-child(n + 4) {
+    transition-delay: 150ms;
+  }
+
   .artist-slide .eyebrow,
   .artist-meta dt,
   .artist-slide :global(.button-link)::before {
     color: var(--artist-accent);
   }
 
-  .artist-slide .eyebrow,
-  .artist-meta dt,
-  .artist-stats strong,
   .artist-mobile-tabs button::before,
   .artist-mobile-tabs button::after {
     animation: accent-prism-glow 9s ease-in-out infinite;
@@ -537,9 +609,25 @@ const metricsEndpoint =
   }
 
   @media (max-width: 900px) {
+    :global(body[data-page='artists']) {
+      height: 100svh;
+      min-height: 100svh;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    :global(body[data-page='artists']:has(.site-footer__details[open])) {
+      overflow-y: auto;
+    }
+
+    :global(body[data-page='artists'] .site-main) {
+      height: calc(100svh - var(--header-height) - var(--mobile-footer-height));
+      flex: 0 0 auto;
+    }
+
     .artist-gallery {
-      height: auto;
-      min-height: calc(100svh - var(--header-height) - var(--mobile-footer-height));
+      height: 100%;
+      min-height: 0;
       flex: 1;
     }
 
@@ -561,12 +649,12 @@ const metricsEndpoint =
     .artist-slide__copy {
       justify-content: flex-start;
       padding: 24px 22px 30px;
-      overflow-y: auto;
+      overflow: hidden;
     }
 
     .artist-mobile-tabs {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -619,10 +707,10 @@ const metricsEndpoint =
     }
 
     .artist-slide__panel[data-open='true'] {
-      max-height: min(44svh, 420px);
+      max-height: min(42svh, 390px);
       padding-top: 16px;
       padding-right: 6px;
-      overflow-y: auto;
+      overflow-y: hidden;
       opacity: 1;
       overscroll-behavior: contain;
       scrollbar-color: var(--artist-accent) color-mix(in srgb, var(--artist-surface), #000 50%);

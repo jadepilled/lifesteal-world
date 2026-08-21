@@ -1,6 +1,5 @@
 ---
 import { withBase } from '../lib/base';
-import figlet from 'figlet';
 
 const pathname = Astro.url.pathname;
 const navigation = [
@@ -10,20 +9,13 @@ const navigation = [
   { href: '/store/', label: 'store' },
   { href: '/about/', label: 'about' },
 ];
-const asciiMark = figlet
-  .textSync('lifesteal', {
-    font: 'Small',
-    horizontalLayout: 'fitted',
-    verticalLayout: 'fitted',
-  })
-  .trimEnd();
 ---
 
 <header class="site-header">
   <div class="site-header__inner">
     <a class="wordmark prism-hover" href={withBase('/')} aria-label="lifesteal home">
-      <pre class="wordmark__base" aria-hidden="true">{asciiMark}</pre>
-      <pre class="wordmark__prism" aria-hidden="true">{asciiMark}</pre>
+      <span class="wordmark__base" aria-hidden="true">lifesteal</span>
+      <span class="wordmark__prism" aria-hidden="true">lifesteal</span>
     </a>
 
     <nav class="site-nav" aria-label="Primary navigation">

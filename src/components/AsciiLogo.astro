@@ -1,9 +1,18 @@
 ---
-const logoText = String.raw`    ___ ____          __             __
-   / (_) __/__  _____/ /____  ____ _/ /
-  / / / /_/ _ \/ ___/ __/ _ \/ __ '/ /
- / / / __/  __(__  ) /_/  __/ /_/ / /
-/_/_/_/  \___/____/\__/\___/\__,_/_/`;
+import figlet from 'figlet';
+
+const renderLogo = (text: string) =>
+  figlet
+    .textSync(text, {
+      font: 'Small Slant',
+      horizontalLayout: 'fitted',
+      verticalLayout: 'fitted',
+    })
+    .trimEnd();
+const smallLogoText = renderLogo('lifesteal');
+const compactLogoText = renderLogo('lifesteal.world');
+const wideLogoText = renderLogo('www.lifesteal.world');
+const smallColumns = Math.max(...smallLogoText.split('\n').map((line) => line.length), 1);
 ---
 
 <div class="ascii-stage" data-ascii-stage data-colour-mode="green">
@@ -24,7 +33,9 @@ const logoText = String.raw`    ___ ____          __             __
       class="ascii-logo"
       aria-hidden="true"
       data-ascii-logo
-      data-typing="true"><span class="ascii-logo__measure" data-ascii-source>{logoText}</span><span class="ascii-logo__output" data-ascii-output /><span class="ascii-logo__shimmer prism-text" data-ascii-shimmer /></pre>
+      data-typing="true"
+      data-logo-variant="small"
+      style={`--logo-columns:${smallColumns}`}><span class="ascii-logo__measure" data-ascii-source data-small={smallLogoText} data-compact={compactLogoText} data-wide={wideLogoText}>{smallLogoText}</span><span class="ascii-logo__output" data-ascii-output /><span class="ascii-logo__shimmer prism-text" data-ascii-shimmer /></pre>
     <form class="ascii-terminal" data-terminal-form autocomplete="off">
       <label class="visually-hidden" for="ascii-terminal-input"
         >Enter a colour or page command</label
@@ -116,11 +127,16 @@ const logoText = String.raw`    ___ ____          __             __
         ...'가나다라마바사아자차카타파하',
         ...'अआइईउऊकखगघचछजझटठडढतथदधपफबभमयरलवशषसह',
       ];
-      const fullText = source.textContent ?? '';
+      const smallText = source.dataset.small ?? source.textContent ?? '';
+      const compactText = source.dataset.compact ?? smallText;
+      const wideText = source.dataset.wide ?? compactText;
+      let fullText = smallText;
       const origins: RainOrigin[] = [];
       const logoInkLines: LogoInkLine[] = [];
       const logoStreams: RainStream[] = [];
       const ambientStreams: RainStream[] = [];
+      const coverageCanvas = document.createElement('canvas');
+      const coverageContext = coverageCanvas.getContext('2d', { alpha: true });
       const routeBase = import.meta.env.BASE_URL.replace(/\/$/, '');
       const routeCommands: Record<string, string> = {
         HOME: '/',
@@ -197,6 +213,25 @@ const logoText = String.raw`    ___ ____          __             __
         };
       };
 
+      const selectResponsiveLogo = () => {
+        const useWide = stage.clientWidth >= 1180;
+        const useCompact = stage.clientWidth >= 720;
+        const nextText = useWide ? wideText : useCompact ? compactText : smallText;
+        const variant = useWide ? 'wide' : useCompact ? 'compact' : 'small';
+        if (nextText === fullText && logo.dataset.logoVariant === variant) return false;
+        fullText = nextText;
+        source.textContent = fullText;
+        logo.dataset.logoVariant = variant;
+        logo.style.setProperty(
+          '--logo-columns',
+          String(Math.max(...fullText.split('\n').map((line) => line.length), 1)),
+        );
+        output.textContent = typingComplete ? fullText : '';
+        shimmer.textContent = output.textContent;
+        typedCharacterCount = typingComplete ? fullText.length : -1;
+        return true;
+      };
+
       const scheduleRain = (time: number) => {
         if (time >= nextAmbientSpawnAt) {
           const ambientLimit = mobileViewport.matches ? 18 : 38;
@@ -216,8 +251,98 @@ const logoText = String.raw`    ___ ____          __             __
         }
       };
 
+      const buildCoverageMask = (stageRect: DOMRect, logoRect: DOMRect, fontSize: number) => {
+        if (!coverageContext || width <= 0 || height <= 0) return;
+        coverageCanvas.width = Math.max(1, Math.ceil(width));
+        coverageCanvas.height = Math.max(1, Math.ceil(height));
+        coverageContext.clearRect(0, 0, coverageCanvas.width, coverageCanvas.height);
+        coverageContext.fillStyle = '#fff';
+        coverageContext.font = logoMaskFont;
+        coverageContext.textAlign = 'left';
+        coverageContext.textBaseline = 'alphabetic';
+        for (const line of logoInkLines) {
+          coverageContext.fillText(line.text, line.x, line.baselineY);
+        }
+
+        const padding = Math.max(3, Math.ceil(fontSize * 0.22));
+        const left = Math.max(0, Math.floor(logoRect.left - stageRect.left - padding));
+        const top = Math.max(0, Math.floor(logoRect.top - stageRect.top - padding));
+        const right = Math.min(
+          coverageCanvas.width,
+          Math.ceil(logoRect.right - stageRect.left + padding),
+        );
+        const bottom = Math.min(
+          coverageCanvas.height,
+          Math.ceil(logoRect.bottom - stageRect.top + padding),
+        );
+        const maskWidth = Math.max(1, right - left);
+        const maskHeight = Math.max(1, bottom - top);
+        const image = coverageContext.getImageData(left, top, maskWidth, maskHeight);
+        const size = maskWidth * maskHeight;
+        const ink = new Uint8Array(size);
+        for (let index = 0; index < size; index += 1) {
+          if ((image.data[index * 4 + 3] ?? 0) > 20) ink[index] = 1;
+        }
+
+        const closedInk = ink.slice();
+        const radius = fontSize >= 12 ? 2 : 1;
+        for (let y = 0; y < maskHeight; y += 1) {
+          for (let x = 0; x < maskWidth; x += 1) {
+            const index = y * maskWidth + x;
+            if (!ink[index]) continue;
+            for (let offsetY = -radius; offsetY <= radius; offsetY += 1) {
+              const nextY = y + offsetY;
+              if (nextY < 0 || nextY >= maskHeight) continue;
+              for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
+                const nextX = x + offsetX;
+                if (nextX < 0 || nextX >= maskWidth) continue;
+                closedInk[nextY * maskWidth + nextX] = 1;
+              }
+            }
+          }
+        }
+
+        const exterior = new Uint8Array(size);
+        const queue = new Int32Array(size);
+        let queueStart = 0;
+        let queueEnd = 0;
+        const enqueue = (index: number) => {
+          if (index < 0 || index >= size || closedInk[index] || exterior[index]) return;
+          exterior[index] = 1;
+          queue[queueEnd++] = index;
+        };
+        for (let x = 0; x < maskWidth; x += 1) {
+          enqueue(x);
+          enqueue((maskHeight - 1) * maskWidth + x);
+        }
+        for (let y = 0; y < maskHeight; y += 1) {
+          enqueue(y * maskWidth);
+          enqueue(y * maskWidth + maskWidth - 1);
+        }
+        while (queueStart < queueEnd) {
+          const index = queue[queueStart++] ?? 0;
+          const x = index % maskWidth;
+          const y = Math.floor(index / maskWidth);
+          if (x > 0) enqueue(index - 1);
+          if (x + 1 < maskWidth) enqueue(index + 1);
+          if (y > 0) enqueue(index - maskWidth);
+          if (y + 1 < maskHeight) enqueue(index + maskWidth);
+        }
+
+        for (let index = 0; index < size; index += 1) {
+          const covered = closedInk[index] || !exterior[index];
+          image.data[index * 4] = 255;
+          image.data[index * 4 + 1] = 255;
+          image.data[index * 4 + 2] = 255;
+          image.data[index * 4 + 3] = covered ? 255 : 0;
+        }
+        coverageContext.clearRect(0, 0, coverageCanvas.width, coverageCanvas.height);
+        coverageContext.putImageData(image, left, top);
+      };
+
       const rebuildGeometry = () => {
         if (!context) return;
+        selectResponsiveLogo();
         origins.length = 0;
         logoInkLines.length = 0;
         const stageRect = stage.getBoundingClientRect();
@@ -259,6 +384,8 @@ const logoText = String.raw`    ___ ____          __             __
             });
           }
         }
+
+        buildCoverageMask(stageRect, logoRect, fontSize);
 
         for (let index = ambientStreams.length - 1; index >= 0; index -= 1) {
           if ((ambientStreams[index]?.x ?? 0) > width + 20) ambientStreams.splice(index, 1);
@@ -340,11 +467,7 @@ const logoText = String.raw`    ___ ____          __             __
         if (!context) return;
         context.save();
         context.globalCompositeOperation = 'destination-out';
-        context.fillStyle = '#000';
-        context.font = logoMaskFont;
-        context.textAlign = 'left';
-        context.textBaseline = 'alphabetic';
-        for (const line of logoInkLines) context.fillText(line.text, line.x, line.baselineY);
+        context.drawImage(coverageCanvas, 0, 0, width, height);
         context.restore();
       };
 

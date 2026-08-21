@@ -3,12 +3,14 @@ import AsciiTitle from '../components/AsciiTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { withBase } from '../lib/base';
 
-const stationEnabled = import.meta.env.PUBLIC_RADIO_ENABLED === 'true';
-const hlsUrl =
-  import.meta.env.PUBLIC_RADIO_HLS_URL ?? 'https://radio.lifesteal.world/live/index.m3u8';
-const mp3Url = import.meta.env.PUBLIC_RADIO_MP3_URL ?? 'https://radio.lifesteal.world/stream.mp3';
+const stationEnabled = import.meta.env.PUBLIC_RADIO_ENABLED !== 'false';
+const hlsUrl = import.meta.env.PUBLIC_RADIO_HLS_URL ?? '';
+const mp3Url =
+  import.meta.env.PUBLIC_RADIO_MP3_URL ??
+  'https://lifesteal-signal-api.jade-431.workers.dev/radio/stream.mp3';
 const metadataUrl =
-  import.meta.env.PUBLIC_RADIO_METADATA_URL ?? 'https://radio.lifesteal.world/now-playing.json';
+  import.meta.env.PUBLIC_RADIO_METADATA_URL ??
+  'https://lifesteal-signal-api.jade-431.workers.dev/radio/now-playing.json';
 const offlineArtwork = '/assets/radio/offline-placeholder.svg';
 ---
 
@@ -25,16 +27,26 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     data-hls-url={hlsUrl}
     data-mp3-url={mp3Url}
     data-metadata-url={metadataUrl}
+    data-state="offline"
     aria-label="LIFESTEAL radio player"
   >
     <div class="radio-console__art-shell">
-      <img
-        src={withBase(offlineArtwork)}
-        alt="LIFESTEAL broadcast offline placeholder"
-        width="1080"
-        height="1080"
-        data-radio-artwork
-      />
+      <canvas class="radio-console__visualizer" data-radio-visualizer aria-hidden="true"></canvas>
+      <div class="radio-console__artwork-hud">
+        <img
+          src={withBase(offlineArtwork)}
+          alt="LIFESTEAL broadcast offline placeholder"
+          width="1080"
+          height="1080"
+          data-radio-artwork
+        />
+        <span data-radio-artwork-label>NO MEDIA LOADED</span>
+      </div>
+      <dl class="radio-console__telemetry" aria-label="Broadcast connection statistics">
+        <div><dt>LINK</dt><dd data-radio-transport>STANDBY</dd></div>
+        <div><dt>FORMAT</dt><dd data-radio-format>MP3 / 128K</dd></div>
+        <div><dt>NETWORK</dt><dd data-radio-network>CHECKING</dd></div>
+      </dl>
       <div class="radio-console__signal" aria-hidden="true">
         {
           Array.from({ length: 22 }, (_, index) => (
@@ -52,12 +64,11 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       </div>
 
       <div class="radio-console__metadata">
-        <span class="eyebrow">NOW TRANSMITTING</span>
         <p class="radio-console__artist" data-radio-artist>NO MEDIA LOADED</p>
         <AsciiTitle
           text="STREAM OFFLINE"
           variants={['STREAM OFFLINE']}
-          accent="var(--accent)"
+          accent="var(--radio-title-accent, #ff304f)"
           id="radio-now-playing"
         />
         <p class="radio-console__album" data-radio-album>CHANNEL IDLE</p>
@@ -98,19 +109,27 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
           </p>
         )
       }
-      <audio data-radio-audio preload="none"></audio>
+      <audio data-radio-audio preload="none" crossorigin="anonymous"></audio>
     </div>
   </section>
 </BaseLayout>
 
 <script>
   type NowPlaying = {
+    status?: 'online' | 'offline';
     artist?: string;
     title?: string;
     album?: string;
     year?: number;
     label?: string;
     artwork?: string;
+    palette?: string[];
+    broadcast?: {
+      bitrateKbps?: number;
+      channels?: number;
+      codec?: string;
+      sampleRate?: number;
+    };
   };
 
   const setupRadio = () => {
@@ -124,9 +143,51 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     const artist = consoleElement.querySelector<HTMLElement>('[data-radio-artist]');
     const album = consoleElement.querySelector<HTMLElement>('[data-radio-album]');
     const artwork = consoleElement.querySelector<HTMLImageElement>('[data-radio-artwork]');
+    const artworkLabel = consoleElement.querySelector<HTMLElement>('[data-radio-artwork-label]');
+    const visualizerCanvas =
+      consoleElement.querySelector<HTMLCanvasElement>('[data-radio-visualizer]');
+    const transport = consoleElement.querySelector<HTMLElement>('[data-radio-transport]');
+    const format = consoleElement.querySelector<HTMLElement>('[data-radio-format]');
+    const network = consoleElement.querySelector<HTMLElement>('[data-radio-network]');
     let hls: { destroy: () => void } | undefined;
+    let visualizer:
+      | {
+          connectAudio: () => Promise<void>;
+          destroy: () => void;
+          setPalette: (colors: string[]) => void;
+        }
+      | undefined;
     let metadataTimer = 0;
     let loading = false;
+
+    const updateNetworkStats = () => {
+      const connection = (
+        navigator as Navigator & {
+          connection?: { downlink?: number; effectiveType?: string; rtt?: number };
+        }
+      ).connection;
+      if (!network) return;
+      if (!connection) {
+        network.textContent = navigator.onLine ? 'ONLINE' : 'OFFLINE';
+        return;
+      }
+      const downlink = connection.downlink ? ` / ${connection.downlink.toFixed(1)}M` : '';
+      const rtt = connection.rtt ? ` / ${connection.rtt}MS` : '';
+      network.textContent = `${(connection.effectiveType ?? 'ONLINE').toUpperCase()}${downlink}${rtt}`;
+    };
+
+    const ensureVisualizer = async () => {
+      if (
+        visualizer ||
+        !visualizerCanvas ||
+        !audio ||
+        !window.matchMedia('(min-width: 901px)').matches
+      )
+        return visualizer;
+      const { createRadioVisualizer } = await import('../lib/radio-visualizer');
+      visualizer = createRadioVisualizer(visualizerCanvas, audio);
+      return visualizer;
+    };
 
     const setState = (value: string, machineState: string) => {
       if (state) state.textContent = value;
@@ -138,14 +199,17 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       hls?.destroy();
       hls = undefined;
       audio.src = consoleElement.dataset.mp3Url;
+      if (transport) transport.textContent = 'MP3 / LIVE';
       notice && (notice.textContent = 'HLS unavailable; joined through the continuous MP3 mount.');
     };
 
     const attachStream = async () => {
       if (!audio || loading) return;
       loading = true;
+      audio.crossOrigin = 'anonymous';
       const hlsUrl = consoleElement.dataset.hlsUrl;
       try {
+        await ensureVisualizer();
         if (hlsUrl && audio.canPlayType('application/vnd.apple.mpegurl')) {
           audio.src = hlsUrl;
         } else if (hlsUrl) {
@@ -168,6 +232,7 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
         } else {
           useMp3Fallback();
         }
+        await visualizer?.connectAudio();
         await audio.play();
         setState('LIVE / CONNECTED', 'playing');
         if (toggle) toggle.textContent = 'LEAVE LIVE SIGNAL';
@@ -189,6 +254,7 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       hls?.destroy();
       hls = undefined;
       setState('READY TO JOIN', 'ready');
+      if (transport) transport.textContent = 'STANDBY';
       if (toggle) toggle.textContent = 'JOIN LIVE SIGNAL';
     };
 
@@ -197,8 +263,11 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       if (!url) return;
       try {
         const response = await fetch(url, { cache: 'no-store' });
-        if (!response.ok) return;
+        if (!response.ok) throw new Error('Metadata unavailable');
         const metadata = (await response.json()) as NowPlaying;
+        if (metadata.status === 'offline') throw new Error('Broadcast offline');
+        consoleElement.classList.remove('radio-console--offline');
+        if (consoleElement.dataset.state === 'offline') setState('READY TO JOIN', 'ready');
         if (metadata.title) {
           window.dispatchEvent(
             new CustomEvent('lifesteal:ascii-title', {
@@ -212,17 +281,41 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
             .filter(Boolean)
             .join(' / ');
         }
-        if (artwork && metadata.artwork) artwork.src = metadata.artwork;
+        const artworkUrl = metadata.artwork
+          ? new URL(
+              metadata.artwork.startsWith('/') ? `/radio${metadata.artwork}` : metadata.artwork,
+              url,
+            ).toString()
+          : undefined;
+        if (artwork && artworkUrl) {
+          artwork.src = artworkUrl;
+          artwork.alt = `${metadata.artist ?? 'LIFESTEAL'} — ${metadata.title ?? 'now playing'} artwork`;
+        }
+        if (artworkLabel) artworkLabel.textContent = metadata.title ?? 'LIVE SIGNAL';
+        if (metadata.palette?.length) {
+          consoleElement.style.setProperty('--radio-title-accent', metadata.palette[0]!);
+          (await ensureVisualizer())?.setPalette(metadata.palette);
+        }
+        if (format && metadata.broadcast) {
+          const codec = (metadata.broadcast.codec ?? 'MP3').toUpperCase();
+          const bitrate = metadata.broadcast.bitrateKbps
+            ? ` / ${metadata.broadcast.bitrateKbps}K`
+            : '';
+          format.textContent = `${codec}${bitrate}`;
+        }
         if ('mediaSession' in navigator && metadata.title) {
           navigator.mediaSession.metadata = new MediaMetadata({
             title: metadata.title,
             artist: metadata.artist,
             album: metadata.album,
-            artwork: metadata.artwork ? [{ src: metadata.artwork }] : [],
+            artwork: artworkUrl ? [{ src: artworkUrl }] : [],
           });
         }
       } catch {
-        // Keep the last known metadata visible while the stream continues.
+        if (audio?.paused) {
+          consoleElement.classList.add('radio-console--offline');
+          setState('SIGNAL OFFLINE', 'offline');
+        }
       }
     };
 
@@ -234,6 +327,10 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       if (audio) audio.volume = Number(volume.value);
     });
     if (audio && volume) audio.volume = Number(volume.value);
+    updateNetworkStats();
+    window.addEventListener('online', updateNetworkStats);
+    window.addEventListener('offline', updateNetworkStats);
+    void ensureVisualizer();
     refreshMetadata();
     metadataTimer = window.setInterval(refreshMetadata, 10_000);
     document.addEventListener(
@@ -241,6 +338,9 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       () => {
         window.clearInterval(metadataTimer);
         hls?.destroy();
+        visualizer?.destroy();
+        window.removeEventListener('online', updateNetworkStats);
+        window.removeEventListener('offline', updateNetworkStats);
       },
       { once: true },
     );
@@ -263,18 +363,87 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     min-height: 0;
     overflow: hidden;
     border-right: 1px solid var(--line);
-    background: #080508;
+    background: #020203;
   }
 
-  .radio-console__art-shell img {
+  .radio-console__visualizer {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    filter: grayscale(0.15) brightness(0.65);
   }
 
-  .radio-console:not(.radio-console--offline)[data-state='playing'] .radio-console__art-shell img {
+  .radio-console__artwork-hud {
+    position: absolute;
+    top: clamp(18px, 3vw, 38px);
+    left: clamp(18px, 3vw, 38px);
+    width: clamp(130px, 30%, 220px);
+    border: 1px solid rgba(244, 241, 234, 0.42);
+    background: #030303;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  }
+
+  .radio-console__artwork-hud img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    filter: grayscale(0.35) brightness(0.72);
+  }
+
+  .radio-console__artwork-hud span {
+    display: block;
+    overflow: hidden;
+    padding: 8px 10px;
+    color: var(--muted);
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .radio-console:not(.radio-console--offline) .radio-console__artwork-hud img {
     filter: none;
+  }
+
+  .radio-console__telemetry {
+    position: absolute;
+    top: clamp(18px, 3vw, 38px);
+    right: clamp(18px, 3vw, 38px);
+    display: grid;
+    width: min(210px, 42%);
+    margin: 0;
+    border-top: 1px solid rgba(244, 241, 234, 0.32);
+    background: rgba(0, 0, 0, 0.56);
+    backdrop-filter: blur(8px);
+  }
+
+  .radio-console__telemetry div {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(244, 241, 234, 0.16);
+    gap: 12px;
+  }
+
+  .radio-console__telemetry dt,
+  .radio-console__telemetry dd {
+    margin: 0;
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+
+  .radio-console__telemetry dt {
+    color: var(--muted);
+  }
+
+  .radio-console__telemetry dd {
+    overflow: hidden;
+    color: var(--white);
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .radio-console__signal {
@@ -338,10 +507,14 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
   }
 
   .radio-console__artist {
-    margin: 12px 0 0;
-    color: var(--magenta);
+    margin: 0;
+    color: var(--white);
     font-size: 12px;
     letter-spacing: 0.12em;
+  }
+
+  .radio-console--offline .radio-console__artist {
+    color: var(--muted);
   }
 
   .radio-console__album {
@@ -363,8 +536,13 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
   }
 
   .radio-console__divider span:first-child {
-    background: var(--red);
-    box-shadow: 0 0 9px rgba(255, 48, 79, 0.7);
+    background: var(--line-strong);
+  }
+
+  .radio-console[data-state='playing'] .radio-console__divider span:first-child {
+    background: var(--radio-title-accent, var(--accent));
+    box-shadow: 0 0 9px
+      color-mix(in srgb, var(--radio-title-accent, var(--accent)) 70%, transparent);
   }
 
   .radio-console__controls {
@@ -422,6 +600,10 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
     background: #625f5d;
   }
 
+  .radio-console--offline {
+    --radio-title-accent: #ff304f;
+  }
+
   @keyframes meter {
     from {
       transform: scaleY(0.26);
@@ -449,6 +631,33 @@ const offlineArtwork = '/assets/radio/offline-placeholder.svg';
       border-right: 0;
       border-bottom: 1px solid var(--line);
       aspect-ratio: auto;
+    }
+
+    .radio-console__visualizer,
+    .radio-console__telemetry {
+      display: none;
+    }
+
+    .radio-console__artwork-hud {
+      inset: 0;
+      width: 100%;
+      border: 0;
+      box-shadow: none;
+    }
+
+    .radio-console__artwork-hud img {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: auto;
+      object-fit: cover;
+    }
+
+    .radio-console__artwork-hud span {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.72);
     }
   }
 

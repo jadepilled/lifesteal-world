@@ -7,13 +7,9 @@
     "album": "LIFE IS BEAUTIFUL",
     "title": "LIFE IS BEAUTIFUL",
     "audioFilename": "life-is-beautiful.mp3",
-    "artwork": {
-      "src": "/assets/releases/life-is-beautiful-cover.webp",
-      "alt": "LIFE IS BEAUTIFUL cover with a black thorn-like mark over a pink sky"
-    },
+    "artwork": "/artwork/life-is-beautiful.jpg",
     "durationMs": 158000,
-    "explicit": false,
-    "credits": "Written and produced by HAZELMERE. Released by LIFESTEAL.",
+    "palette": ["#dda6ef", "#f4a6ef", "#fff8ff"],
     "enabled": true,
     "order": 1
   }
