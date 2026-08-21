@@ -13,6 +13,9 @@ module.exports = {
       staticDistDir: './dist',
       url: process.env.LHCI_URL ? [process.env.LHCI_URL] : allUrls,
       numberOfRuns: 1,
+      puppeteerLaunchOptions: {
+        args: ['--force-prefers-reduced-motion=reduce'],
+      },
     },
     assert: {
       assertions: {
