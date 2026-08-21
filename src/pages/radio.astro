@@ -1,7 +1,6 @@
 ---
 import AsciiTitle from '../components/AsciiTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { radioTracks } from '../lib/content';
 import { withBase } from '../lib/base';
 
 const stationEnabled = import.meta.env.PUBLIC_RADIO_ENABLED === 'true';
@@ -10,13 +9,13 @@ const hlsUrl =
 const mp3Url = import.meta.env.PUBLIC_RADIO_MP3_URL ?? 'https://radio.lifesteal.world/stream.mp3';
 const metadataUrl =
   import.meta.env.PUBLIC_RADIO_METADATA_URL ?? 'https://radio.lifesteal.world/now-playing.json';
-const initialTrack = radioTracks[0];
+const offlineArtwork = '/assets/radio/offline-placeholder.svg';
 ---
 
 <BaseLayout
   title="Radio"
   description="The LIFESTEAL live radio signal. One continuous programme shared by every listener."
-  image={initialTrack?.artwork.src}
+  image={offlineArtwork}
   page="radio"
 >
   <section
@@ -30,8 +29,8 @@ const initialTrack = radioTracks[0];
   >
     <div class="radio-console__art-shell">
       <img
-        src={initialTrack ? withBase(initialTrack.artwork.src) : undefined}
-        alt={initialTrack?.artwork.alt}
+        src={withBase(offlineArtwork)}
+        alt="LIFESTEAL broadcast offline placeholder"
         width="1080"
         height="1080"
         data-radio-artwork
@@ -54,20 +53,14 @@ const initialTrack = radioTracks[0];
 
       <div class="radio-console__metadata">
         <span class="eyebrow">NOW TRANSMITTING</span>
-        <p class="radio-console__artist" data-radio-artist>{initialTrack?.artist}</p>
-        {
-          initialTrack && (
-            <AsciiTitle
-              text={initialTrack.title}
-              variants={radioTracks.map((track) => track.title)}
-              accent="var(--magenta)"
-              id="radio-now-playing"
-            />
-          )
-        }
-        <p class="radio-console__album" data-radio-album>
-          {initialTrack?.album} / {initialTrack?.year} / {initialTrack?.label}
-        </p>
+        <p class="radio-console__artist" data-radio-artist>NO MEDIA LOADED</p>
+        <AsciiTitle
+          text="STREAM OFFLINE"
+          variants={['STREAM OFFLINE']}
+          accent="var(--accent)"
+          id="radio-now-playing"
+        />
+        <p class="radio-console__album" data-radio-album>CHANNEL IDLE</p>
       </div>
 
       <div class="radio-console__divider" aria-hidden="true">
@@ -81,7 +74,7 @@ const initialTrack = radioTracks[0];
           data-radio-toggle
           disabled={!stationEnabled}
         >
-          {stationEnabled ? 'JOIN LIVE SIGNAL' : 'TRANSMISSION SERVER PENDING'}
+          {stationEnabled ? 'JOIN LIVE SIGNAL' : 'BROADCAST NOT AVAILABLE'}
         </button>
         <label class="radio-console__volume">
           <span>LEVEL</span>
@@ -97,33 +90,17 @@ const initialTrack = radioTracks[0];
         </label>
       </div>
 
-      <p class="radio-console__notice" data-radio-notice>
-        {
-          stationEnabled
-            ? 'Playback begins only after you choose to join. The programme itself is already in motion.'
-            : 'SIGNAL OFFLINE // TRANSMISSION SERVER PENDING.'
-        }
-      </p>
+      {
+        stationEnabled && (
+          <p class="radio-console__notice" data-radio-notice>
+            Playback begins only after you choose to join. The programme itself is already in
+            motion.
+          </p>
+        )
+      }
       <audio data-radio-audio preload="none"></audio>
     </div>
   </section>
-
-  <div class="radio-manifest">
-    <span class="eyebrow">STATION MANIFEST</span>
-    <ol>
-      {
-        radioTracks.map((track) => (
-          <li>
-            <span>{track.artist}</span>
-            <strong>{track.title}</strong>
-            <span>
-              {track.label} / {track.year}
-            </span>
-          </li>
-        ))
-      }
-    </ol>
-  </div>
 </BaseLayout>
 
 <script>
@@ -445,36 +422,6 @@ const initialTrack = radioTracks[0];
     background: #625f5d;
   }
 
-  .radio-manifest {
-    display: grid;
-    grid-template-columns: 190px 1fr;
-    padding: 8px 0;
-    margin-top: clamp(8px, 1.2vh, 14px);
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-
-  .radio-manifest ol {
-    padding: 0;
-    margin: 0;
-    list-style: none;
-  }
-
-  .radio-manifest li {
-    display: grid;
-    grid-template-columns: minmax(140px, 0.6fr) 1fr auto;
-    padding: 8px 0;
-    border-bottom: 1px dotted var(--line);
-    color: var(--muted);
-    font-size: 11px;
-    gap: 18px;
-  }
-
-  .radio-manifest strong {
-    color: var(--white);
-    font-weight: 500;
-  }
-
   @keyframes meter {
     from {
       transform: scaleY(0.26);
@@ -510,18 +457,8 @@ const initialTrack = radioTracks[0];
       padding: 30px 22px 38px;
     }
 
-    .radio-console__controls,
-    .radio-manifest {
+    .radio-console__controls {
       grid-template-columns: 1fr;
-    }
-
-    .radio-manifest {
-      gap: 16px;
-    }
-
-    .radio-manifest li {
-      grid-template-columns: 1fr;
-      gap: 1px;
     }
   }
 </style>

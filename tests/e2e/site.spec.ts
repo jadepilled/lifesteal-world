@@ -11,7 +11,7 @@ test.describe('site shell', () => {
       page,
     }) => {
       await page.goto(siteUrl(route));
-      await expect(page.locator('.wordmark')).toHaveText('lifesteal');
+      await expect(page.locator('.wordmark')).toHaveAttribute('aria-label', 'lifesteal home');
       await expect(page.locator('footer')).toContainText('LIFESTEAL acknowledges');
       await expect(page.locator('.terminal-path')).toHaveCount(0);
       await expect(page.locator('.page-heading')).toHaveCount(0);
@@ -87,22 +87,19 @@ test('header prism plays only when the wordmark is hovered', async ({ page }) =>
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(siteUrl('/about/'));
   const wordmark = page.locator('.wordmark');
-  const animationName = () =>
-    wordmark.evaluate((element) => getComputedStyle(element, '::after').animationName);
-  const prismOpacity = () =>
-    wordmark.evaluate((element) => getComputedStyle(element, '::after').opacity);
+  const prism = wordmark.locator('.wordmark__prism');
+  const animationName = () => prism.evaluate((element) => getComputedStyle(element).animationName);
 
   expect(await animationName()).toBe('none');
   await expect(wordmark).toHaveCSS('text-shadow', 'none');
-  expect(await prismOpacity()).toBe('0');
+  await expect(prism).toHaveCSS('opacity', '0');
   await wordmark.hover();
-  expect(await animationName()).toBe('wordmark-prism');
-  expect(await prismOpacity()).toBe('1');
+  expect(await animationName()).toBe('header-prism');
   await page.mouse.move(900, 500);
-  expect(await animationName()).toBe('none');
-  expect(await prismOpacity()).toBe('0');
+  expect(await animationName()).toBe('header-prism');
+  await expect(wordmark).not.toHaveClass(/prism-hover--run/, { timeout: 2_500 });
   await wordmark.hover();
-  expect(await animationName()).toBe('wordmark-prism');
+  expect(await animationName()).toBe('header-prism');
 });
 
 test('terminal text aligns with its prompt and persisted flag themes clip through the logo', async ({
@@ -363,6 +360,9 @@ test('release and store records are canonical and intentionally pending', async 
   const internetDepressionClub = page.locator('#starstrike-internet-depression-club');
   await expect(internetDepressionClub.locator('a[href*="open.spotify.com"]')).toHaveCount(3);
   await expect(internetDepressionClub.locator('a[href*="soundcloud.com"]')).toHaveCount(1);
+  await expect(internetDepressionClub.locator('a[href*="music.youtube.com"]')).toHaveCount(1);
+  await expect(internetDepressionClub.locator('a[href*="listen.tidal.com"]')).toHaveCount(1);
+  await expect(internetDepressionClub.getByText('Hyperpop', { exact: true })).toBeVisible();
   await expect(page.locator('[data-release-id]')).toHaveCount(11);
   await page.goto(siteUrl('/store/'));
   await expect(page.locator('.page-heading')).toHaveCount(0);
@@ -389,8 +389,37 @@ test('release cards replace timestamped fallbacks with live Worker metrics', asy
   });
   await page.goto(siteUrl('/releases/'));
   const release = page.locator('[data-release-id="hazelmere-life-is-beautiful"]');
-  await expect(release.locator('[data-metric-value]')).toHaveText('4,321');
+  await expect(release.locator('[data-metric-value]')).toHaveText('4.32K');
+  await expect(release.locator('[data-total-metric-value]')).toHaveText('4.32K');
   await expect(release.locator('[data-metric-date]')).toContainText('21/08/2026');
+});
+
+test('artist profiles hydrate audience totals without inventing unavailable metrics', async ({
+  page,
+}) => {
+  await page.route('https://lifesteal-signal-api.jade-431.workers.dev/metrics', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        metrics: [],
+        artistMetrics: [
+          {
+            artistId: 'starstrike',
+            totalPlays: 301230,
+            plays30d: 2820,
+            soundcloudFollowers: 443,
+            spotifyMonthlyListeners: 30,
+          },
+        ],
+      }),
+    });
+  });
+  await page.goto(siteUrl('/artists/#starstrike'));
+  const artist = page.locator('#starstrike');
+  await expect(artist.locator('[data-artist-metric="totalPlays"]')).toHaveText('301.23K');
+  await expect(artist.locator('[data-artist-metric="plays30d"]')).toHaveText('2.82K');
+  await expect(artist.locator('[data-artist-metric="spotifyMonthlyListeners"]')).toHaveText('30');
 });
 
 test('desktop routes keep the complete shell inside one viewport', async ({ page, isMobile }) => {
@@ -422,8 +451,10 @@ test('desktop routes keep the complete shell inside one viewport', async ({ page
 
 test('radio has an explicit safe offline state', async ({ page }) => {
   await page.goto(siteUrl('/radio/'));
-  await expect(page.getByRole('button', { name: 'TRANSMISSION SERVER PENDING' })).toBeDisabled();
-  await expect(page.locator('[data-radio-notice]')).toContainText('SIGNAL OFFLINE');
+  await expect(page.getByRole('button', { name: 'BROADCAST NOT AVAILABLE' })).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'STREAM OFFLINE' })).toBeVisible();
+  await expect(page.locator('[data-radio-notice]')).toHaveCount(0);
+  await expect(page.getByText('STATION MANIFEST')).toHaveCount(0);
 });
 
 test('about exposes the direct contact channel', async ({ page }) => {

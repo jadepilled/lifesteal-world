@@ -1,4 +1,5 @@
 import releases from '../../../src/data/generated/releases.json';
+import artists from '../../../src/data/artists.json';
 
 interface Env {
   DB: D1Database;
@@ -17,8 +18,15 @@ type PlatformLink = {
 
 type ReleaseRecord = {
   canonicalId: string;
+  artistIds: string[];
   links: PlatformLink[];
   metrics: Array<{ platform: string; kind: string; value: number; asOf: string }>;
+};
+
+type ArtistRecord = {
+  id: string;
+  spotifyArtistId: string | null;
+  soundcloudProfileUrl: string | null;
 };
 
 type Metric = {
@@ -30,6 +38,7 @@ type Metric = {
 };
 
 const catalogue = releases as ReleaseRecord[];
+const artistCatalogue = artists as ArtistRecord[];
 const consentVersion = 'mailing-list-v1-2026-08-21';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -199,6 +208,32 @@ const findPlaybackCount = (value: unknown, expectedId: string): number | null =>
   return null;
 };
 
+const findSoundCloudUser = (
+  value: unknown,
+  expectedUrl: string,
+): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object') return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findSoundCloudUser(item, expectedUrl);
+      if (found) return found;
+    }
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    String(record.permalink_url ?? '').replace(/\/$/, '') === expectedUrl.replace(/\/$/, '') &&
+    typeof record.followers_count === 'number'
+  ) {
+    return record;
+  }
+  for (const child of Object.values(record)) {
+    const found = findSoundCloudUser(child, expectedUrl);
+    if (found) return found;
+  }
+  return null;
+};
+
 const soundcloudCount = async (link: PlatformLink, token: string | null) => {
   if (!link.platformId) return null;
   if (token) {
@@ -234,14 +269,64 @@ const soundcloudCount = async (link: PlatformLink, token: string | null) => {
   return match ? Number(match[1]) : null;
 };
 
+const soundcloudFollowers = async (profileUrl: string) => {
+  const page = await fetch(profileUrl, { headers: { 'User-Agent': 'LIFESTEAL-metrics/1.0' } });
+  if (!page.ok) return null;
+  const html = await page.text();
+  const hydration = html.match(/window\.__sc_hydration\s*=\s*(\[.*?\]);\s*<\/script>/s)?.[1];
+  if (!hydration) return null;
+  try {
+    const user = findSoundCloudUser(JSON.parse(hydration), profileUrl);
+    return typeof user?.followers_count === 'number' ? user.followers_count : null;
+  } catch {
+    return null;
+  }
+};
+
+const spotifyMonthlyListeners = async (artistId: string) => {
+  const response = await fetch(`https://open.spotify.com/artist/${encodeURIComponent(artistId)}`, {
+    headers: { 'User-Agent': 'LIFESTEAL-metrics/1.0' },
+  });
+  if (!response.ok) return null;
+  const html = await response.text();
+  const description = html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)?.[1];
+  const fromDescription = description?.match(/([\d,.]+)\s+monthly listeners?/i)?.[1];
+  if (fromDescription) return Number(fromDescription.replaceAll(',', ''));
+  const fromState = html.match(/"monthlyListeners":(\d+)/)?.[1];
+  return fromState ? Number(fromState) : null;
+};
+
 const upsertMetric = (env: Env, metric: Metric, sourceUrl: string) =>
-  env.DB.prepare(
-    `INSERT INTO platform_metrics (canonical_id, platform, kind, value, captured_at, source_url)
+  env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO platform_metrics (canonical_id, platform, kind, value, captured_at, source_url)
      VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(canonical_id, platform, kind) DO UPDATE SET
        value = excluded.value, captured_at = excluded.captured_at, source_url = excluded.source_url`,
+    ).bind(metric.canonicalId, metric.platform, metric.kind, metric.value, metric.asOf, sourceUrl),
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO metric_history
+        (canonical_id, platform, kind, value, captured_at, source_url)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).bind(metric.canonicalId, metric.platform, metric.kind, metric.value, metric.asOf, sourceUrl),
+  ]);
+
+const upsertArtistMetric = (
+  env: Env,
+  artistId: string,
+  platform: string,
+  kind: string,
+  value: number,
+  capturedAt: string,
+  sourceUrl: string,
+) =>
+  env.DB.prepare(
+    `INSERT INTO artist_metrics (artist_id, platform, kind, value, captured_at, source_url)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(artist_id, platform, kind) DO UPDATE SET
+       value = excluded.value, captured_at = excluded.captured_at, source_url = excluded.source_url`,
   )
-    .bind(metric.canonicalId, metric.platform, metric.kind, metric.value, metric.asOf, sourceUrl)
+    .bind(artistId, platform, kind, value, capturedAt, sourceUrl)
     .run();
 
 const refreshMetrics = async (env: Env) => {
@@ -315,6 +400,47 @@ const refreshMetrics = async (env: Env) => {
       }
     }
   }
+
+  const artistJobs = artistCatalogue.flatMap((artist) => {
+    const jobs: Array<Promise<unknown>> = [];
+    if (artist.soundcloudProfileUrl) {
+      jobs.push(
+        soundcloudFollowers(artist.soundcloudProfileUrl).then((value) =>
+          value === null
+            ? null
+            : upsertArtistMetric(
+                env,
+                artist.id,
+                'soundcloud',
+                'followers',
+                value,
+                capturedAt,
+                artist.soundcloudProfileUrl!,
+              ),
+        ),
+      );
+    }
+    if (artist.spotifyArtistId) {
+      const url = `https://open.spotify.com/artist/${artist.spotifyArtistId}`;
+      jobs.push(
+        spotifyMonthlyListeners(artist.spotifyArtistId).then((value) =>
+          value === null
+            ? null
+            : upsertArtistMetric(
+                env,
+                artist.id,
+                'spotify',
+                'monthly_listeners',
+                value,
+                capturedAt,
+                url,
+              ),
+        ),
+      );
+    }
+    return jobs;
+  });
+  await Promise.allSettled(artistJobs);
   return settled.filter((result) => result.status === 'fulfilled' && result.value).length;
 };
 
@@ -323,8 +449,62 @@ const metrics = async (env: Env) => {
     `SELECT canonical_id AS canonicalId, platform, kind, value, captured_at AS asOf
      FROM platform_metrics ORDER BY canonical_id, platform`,
   ).all<Metric>();
+  const profileResult = await env.DB.prepare(
+    `SELECT artist_id AS artistId, platform, kind, value, captured_at AS asOf
+     FROM artist_metrics ORDER BY artist_id, platform`,
+  ).all<{ artistId: string; platform: string; kind: string; value: number; asOf: string }>();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const baselineResult = await env.DB.prepare(
+    `SELECT history.canonical_id AS canonicalId, history.platform, history.kind,
+            history.value, history.captured_at AS asOf
+     FROM metric_history history
+     WHERE history.kind = 'plays' AND history.captured_at = (
+       SELECT MAX(candidate.captured_at) FROM metric_history candidate
+       WHERE candidate.canonical_id = history.canonical_id
+         AND candidate.platform = history.platform
+         AND candidate.kind = history.kind
+         AND candidate.captured_at <= ?
+     )`,
+  )
+    .bind(cutoff)
+    .all<Metric>();
+
+  const currentPlayMetrics = result.results.filter((metric) => metric.kind === 'plays');
+  const artistMetrics = artistCatalogue.map((artist) => {
+    const releaseIds = new Set(
+      catalogue
+        .filter((release) => release.artistIds.includes(artist.id))
+        .map((release) => release.canonicalId),
+    );
+    const current = currentPlayMetrics.filter((metric) => releaseIds.has(metric.canonicalId));
+    const baseline = baselineResult.results.filter((metric) => releaseIds.has(metric.canonicalId));
+    const profile = profileResult.results.filter((metric) => metric.artistId === artist.id);
+    const totalPlays = current.reduce((sum, metric) => sum + metric.value, 0);
+    const plays30d = baseline.length
+      ? Math.max(0, totalPlays - baseline.reduce((sum, metric) => sum + metric.value, 0))
+      : null;
+    const soundcloud = profile.find(
+      (metric) => metric.platform === 'soundcloud' && metric.kind === 'followers',
+    );
+    const spotify = profile.find(
+      (metric) => metric.platform === 'spotify' && metric.kind === 'monthly_listeners',
+    );
+    return {
+      artistId: artist.id,
+      totalPlays,
+      plays30d,
+      soundcloudFollowers: soundcloud?.value ?? null,
+      spotifyMonthlyListeners: spotify?.value ?? null,
+      asOf:
+        [...current, ...profile]
+          .map((metric) => metric.asOf)
+          .sort()
+          .at(-1) ?? null,
+    };
+  });
+
   return json(
-    { metrics: result.results, updatedAt: new Date().toISOString() },
+    { metrics: result.results, artistMetrics, updatedAt: new Date().toISOString() },
     { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=900' } },
   );
 };

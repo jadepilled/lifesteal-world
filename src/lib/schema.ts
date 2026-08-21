@@ -31,17 +31,30 @@ export const artistSchema = z.object({
   palette: paletteSchema,
   spotifyArtistId: z.string().nullable(),
   soundcloudProfileUrl: httpUrl.nullable(),
+  metricsSnapshot: z.object({
+    soundcloudFollowers: z.number().int().nonnegative().nullable(),
+    spotifyMonthlyListeners: z.number().int().nonnegative().nullable(),
+    asOf: z.iso.datetime(),
+  }),
   links: z.array(
     z.object({
       label: z.string().min(1),
-      platform: z.enum(['instagram', 'soundcloud', 'spotify', 'website']),
+      platform: z.enum(['instagram', 'soundcloud', 'spotify', 'youtube-music', 'tidal', 'website']),
       url: httpUrl,
     }),
   ),
 });
 
 export const platformLinkSchema = z.object({
-  platform: z.enum(['spotify', 'soundcloud', 'bandcamp', 'apple-music', 'other']),
+  platform: z.enum([
+    'spotify',
+    'soundcloud',
+    'youtube-music',
+    'tidal',
+    'bandcamp',
+    'apple-music',
+    'other',
+  ]),
   url: httpUrl,
   platformId: z.string().optional(),
 });
@@ -53,6 +66,7 @@ export const generatedReleaseSchema = z.object({
   artistIds: z.array(z.string()).min(1),
   album: z.string().min(1),
   releaseType: z.enum(['single', 'ep', 'album', 'compilation']),
+  genres: z.array(z.string().min(1)).min(1),
   status: z.enum(['upcoming', 'released', 'archived']),
   releaseDate: z.iso.date().nullable(),
   durationMs: z.number().int().positive().nullable(),
@@ -65,8 +79,8 @@ export const generatedReleaseSchema = z.object({
   links: z.array(platformLinkSchema),
   metrics: z.array(
     z.object({
-      platform: z.literal('soundcloud'),
-      kind: z.literal('plays'),
+      platform: z.string().min(1),
+      kind: z.enum(['plays', 'popularity']),
       value: z.number().int().nonnegative(),
       asOf: z.iso.datetime(),
     }),

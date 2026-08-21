@@ -94,5 +94,35 @@ const socialImage = new URL(withBase(image), Astro.site);
     </main>
     <Footer transition:persist="site-footer" />
     <NewsletterGate transition:persist="newsletter-gate" />
+    <script>
+      const setupTypingFill = () => {
+        const candidates = document.querySelectorAll<HTMLElement>(
+          '.site-main :is(p, dd, dt, li, small, .eyebrow):not(.visually-hidden)',
+        );
+        const reveal = (element: HTMLElement, index: number) => {
+          element.style.setProperty('--type-fill-delay', `${Math.min(index * 18, 240)}ms`);
+          requestAnimationFrame(() => element.classList.add('body-type-fill'));
+        };
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              const element = entry.target as HTMLElement;
+              reveal(element, Number(element.dataset.typeFillIndex ?? 0));
+              observer.unobserve(element);
+            });
+          },
+          { threshold: 0.08 },
+        );
+        candidates.forEach((element, index) => {
+          if (element.closest('pre, ascii-title, [data-ascii-stage]')) return;
+          element.classList.remove('body-type-fill');
+          element.dataset.typeFillIndex = String(index);
+          observer.observe(element);
+        });
+        document.addEventListener('astro:before-swap', () => observer.disconnect(), { once: true });
+      };
+      document.addEventListener('astro:page-load', setupTypingFill);
+    </script>
   </body>
 </html>

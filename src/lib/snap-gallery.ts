@@ -52,6 +52,12 @@ export function setupSnapGallery(root: HTMLElement) {
     animationFrame = 0;
     const width = viewport.clientWidth || 1;
     const progress = Math.max(0, Math.min(slides.length - 1, viewport.scrollLeft / width));
+    slides.forEach((slide, index) => {
+      const distance = Math.min(1, Math.abs(index - progress));
+      slide.style.setProperty('--gallery-slide-opacity', String(1 - distance * 0.5));
+      slide.style.setProperty('--gallery-slide-blur', `${distance * 3.5}px`);
+      slide.style.setProperty('--gallery-slide-scale', String(1 - distance * 0.012));
+    });
     const fromIndex = Math.floor(progress);
     const toIndex = Math.min(slides.length - 1, Math.ceil(progress));
     const amount = progress - fromIndex;

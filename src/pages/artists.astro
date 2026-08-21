@@ -1,8 +1,9 @@
 ---
 import AsciiTitle from '../components/AsciiTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { artists } from '../lib/content';
+import { artists, releases } from '../lib/content';
 import { withBase } from '../lib/base';
+import { formatCount } from '../lib/format';
 
 const initialPalette = artists[0]?.palette;
 const galleryStyle = initialPalette
@@ -14,6 +15,9 @@ const galleryStyle = initialPalette
       `--gallery-glow:${initialPalette.glow}`,
     ].join(';')
   : undefined;
+const metricsEndpoint =
+  import.meta.env.PUBLIC_METRICS_ENDPOINT ??
+  'https://lifesteal-signal-api.jade-431.workers.dev/metrics';
 ---
 
 <BaseLayout
@@ -24,6 +28,7 @@ const galleryStyle = initialPalette
   <section
     class="snap-gallery artist-gallery panel"
     data-gallery
+    data-metrics-endpoint={metricsEndpoint}
     aria-label="LIFESTEAL artists"
     tabindex="0"
     style={galleryStyle}
@@ -31,6 +36,11 @@ const galleryStyle = initialPalette
     <div class="snap-gallery__viewport" data-gallery-viewport tabindex="0">
       {
         artists.map((artist, index) => {
+          const totalPlays = releases
+            .filter((release) => release.artistIds.includes(artist.id))
+            .flatMap((release) => release.metrics)
+            .filter((metric) => metric.kind === 'plays')
+            .reduce((sum, metric) => sum + metric.value, 0);
           const paletteStyle = [
             `--artist-background:${artist.palette.background}`,
             `--artist-surface:${artist.palette.surface}`,
@@ -45,6 +55,7 @@ const galleryStyle = initialPalette
               id={artist.slug}
               data-gallery-slide
               data-gallery-id={artist.slug}
+              data-artist-id={artist.id}
               data-gallery-background={artist.palette.background}
               data-gallery-surface={artist.palette.surface}
               data-gallery-foreground={artist.palette.foreground}
@@ -97,6 +108,32 @@ const galleryStyle = initialPalette
                   id={`${artist.slug}-info`}
                   data-artist-panel="info"
                 >
+                  <ul class="artist-stats" aria-label={`${artist.displayName} audience statistics`}>
+                    <li>
+                      <span>TOTAL PLAYS</span>
+                      <strong data-artist-metric="totalPlays">{formatCount(totalPlays)}</strong>
+                    </li>
+                    <li>
+                      <span>PLAYS (30D)</span>
+                      <strong data-artist-metric="plays30d">COLLECTING</strong>
+                    </li>
+                    <li>
+                      <span>SOUNDCLOUD FOLLOWERS</span>
+                      <strong data-artist-metric="soundcloudFollowers">
+                        {artist.metricsSnapshot.soundcloudFollowers === null
+                          ? '—'
+                          : formatCount(artist.metricsSnapshot.soundcloudFollowers)}
+                      </strong>
+                    </li>
+                    <li>
+                      <span>SPOTIFY MONTHLY</span>
+                      <strong data-artist-metric="spotifyMonthlyListeners">
+                        {artist.metricsSnapshot.spotifyMonthlyListeners === null
+                          ? '—'
+                          : formatCount(artist.metricsSnapshot.spotifyMonthlyListeners)}
+                      </strong>
+                    </li>
+                  </ul>
                   <dl class="artist-meta">
                     <div>
                       <>
@@ -167,9 +204,50 @@ const galleryStyle = initialPalette
 
 <script>
   import { setupSnapGallery } from '../lib/snap-gallery';
+  import { formatCount } from '../lib/format';
+
+  type ArtistMetric = {
+    artistId: string;
+    totalPlays: number;
+    plays30d: number | null;
+    soundcloudFollowers: number | null;
+    spotifyMonthlyListeners: number | null;
+  };
+
+  const hydrateArtistMetrics = async (gallery: HTMLElement) => {
+    if (gallery.dataset.artistMetricsHydrated === 'true') return;
+    gallery.dataset.artistMetricsHydrated = 'true';
+    const endpoint = gallery.dataset.metricsEndpoint;
+    if (!endpoint) return;
+    try {
+      const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { artistMetrics?: ArtistMetric[] };
+      payload.artistMetrics?.forEach((metric) => {
+        const slide = gallery.querySelector<HTMLElement>(
+          `[data-artist-id="${CSS.escape(metric.artistId)}"]`,
+        );
+        if (!slide) return;
+        (
+          ['totalPlays', 'plays30d', 'soundcloudFollowers', 'spotifyMonthlyListeners'] as const
+        ).forEach((key) => {
+          const value = metric[key];
+          const target = slide.querySelector<HTMLElement>(`[data-artist-metric="${key}"]`);
+          if (target)
+            target.textContent =
+              value === null ? (key === 'plays30d' ? 'COLLECTING' : '—') : formatCount(value);
+        });
+      });
+    } catch {
+      // The checked-in snapshot remains visible when the Worker is unavailable.
+    }
+  };
 
   const setupArtists = () => {
-    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(setupSnapGallery);
+    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
+      setupSnapGallery(gallery);
+      void hydrateArtistMetrics(gallery);
+    });
     document.querySelectorAll<HTMLElement>('.artist-slide').forEach((slide) => {
       const buttons = [...slide.querySelectorAll<HTMLButtonElement>('[data-artist-panel-button]')];
       const panels = [...slide.querySelectorAll<HTMLElement>('[data-artist-panel]')];
@@ -235,6 +313,7 @@ const galleryStyle = initialPalette
   }
 
   .artist-slide {
+    --accent: var(--artist-accent);
     display: grid;
     min-width: 100%;
     min-height: 0;
@@ -307,11 +386,55 @@ const galleryStyle = initialPalette
     color: var(--artist-accent);
   }
 
+  .artist-slide .eyebrow,
+  .artist-meta dt,
+  .artist-stats strong,
+  .artist-mobile-tabs button::before,
+  .artist-mobile-tabs button::after {
+    animation: accent-prism-glow 9s ease-in-out infinite;
+  }
+
   .artist-meta {
     display: grid;
     width: 100%;
     margin: 0 0 clamp(14px, 2vh, 24px);
     gap: 6px;
+  }
+
+  .artist-stats {
+    display: grid;
+    padding: 0;
+    margin: 0 0 clamp(12px, 1.8vh, 20px);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border: 1px solid color-mix(in srgb, var(--artist-accent), transparent 68%);
+    list-style: none;
+  }
+
+  .artist-stats li {
+    display: grid;
+    min-width: 0;
+    padding: 9px 10px;
+    background: color-mix(in srgb, var(--artist-accent), transparent 93%);
+    gap: 2px;
+  }
+
+  .artist-stats li:not(:last-child) {
+    border-right: 1px solid color-mix(in srgb, var(--artist-accent), transparent 75%);
+  }
+
+  .artist-stats span {
+    color: color-mix(in srgb, var(--artist-foreground), transparent 48%);
+    font-size: 7px;
+    letter-spacing: 0.04em;
+  }
+
+  .artist-stats strong {
+    overflow: hidden;
+    color: var(--artist-accent);
+    font-family: var(--display);
+    font-size: clamp(17px, 2.5vh, 25px);
+    font-weight: 800;
+    text-overflow: ellipsis;
   }
 
   .artist-mobile-tabs {
@@ -515,6 +638,18 @@ const galleryStyle = initialPalette
   }
 
   @media (max-width: 540px) {
+    .artist-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .artist-stats li:nth-child(2) {
+      border-right: 0;
+    }
+
+    .artist-stats li:nth-child(-n + 2) {
+      border-bottom: 1px solid color-mix(in srgb, var(--artist-accent), transparent 75%);
+    }
+
     .artist-meta div {
       grid-template-columns: 72px 1fr;
     }

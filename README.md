@@ -2,4 +2,4 @@
 
 Official website for LIFESTEAL, an independent record label and alternative lifestyle brand based in Naarm.
 
-[Visit the website](https://jadepilled.github.io/lifesteal-world/)
+[Visit the website](https://lifesteal.world/)

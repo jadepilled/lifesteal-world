@@ -3,6 +3,7 @@ import type { GeneratedRelease } from '../lib/schema';
 import { releaseArtists } from '../lib/content';
 import { withBase } from '../lib/base';
 import AsciiTitle from './AsciiTitle.astro';
+import { formatCount } from '../lib/format';
 
 interface Props {
   release: GeneratedRelease;
@@ -33,6 +34,12 @@ const paletteStyle = [
   `--release-accent:${release.palette.accent}`,
   `--release-glow:${release.palette.glow}`,
 ].join(';');
+const playMetrics = release.metrics.filter((metric) => metric.kind === 'plays');
+const totalPlays = playMetrics.reduce((sum, metric) => sum + metric.value, 0);
+const latestPlayDate = playMetrics
+  .map((metric) => metric.asOf)
+  .sort()
+  .at(-1);
 ---
 
 <article class="release-card" style={paletteStyle} data-release-id={release.canonicalId}>
@@ -83,6 +90,9 @@ const paletteStyle = [
     </p>
     <AsciiTitle text={release.title} accent="var(--release-accent)" />
     {release.version && <p class="release-card__version">{release.version}</p>}
+    <ul class="release-card__genres" aria-label={`${release.title} genres`}>
+      {release.genres.map((genre) => <li>{genre}</li>)}
+    </ul>
     <dl class="release-card__meta">
       <div>
         <dt>FORMAT</dt>
@@ -105,11 +115,20 @@ const paletteStyle = [
       data-release-metrics
       hidden={release.metrics.length === 0}
     >
+      <li data-total-metric hidden={playMetrics.length === 0}>
+        <span>TOTAL PLAYS</span>
+        <strong data-total-metric-value>{formatCount(totalPlays)}</strong>
+        <small data-total-metric-date>
+          {latestPlayDate ? `AS OF ${new Date(latestPlayDate).toLocaleDateString('en-AU')}` : ''}
+        </small>
+      </li>
       {
         release.metrics.map((metric) => (
           <li data-platform-metric data-platform={metric.platform} data-kind={metric.kind}>
             <span data-metric-label>{metric.platform.toUpperCase()} PLAYS</span>
-            <strong data-metric-value>{new Intl.NumberFormat('en-AU').format(metric.value)}</strong>
+            <strong data-metric-value>
+              {metric.kind === 'plays' ? formatCount(metric.value) : `${metric.value}/100`}
+            </strong>
             <small data-metric-date>
               AS OF {new Date(metric.asOf).toLocaleDateString('en-AU')}
             </small>
@@ -148,6 +167,7 @@ const paletteStyle = [
 
 <style>
   .release-card {
+    --accent: var(--release-accent);
     display: grid;
     min-height: 0;
     grid-template-columns: minmax(280px, 0.9fr) minmax(390px, 1.1fr);
@@ -209,6 +229,13 @@ const paletteStyle = [
     text-shadow: 0 0 9px var(--release-glow);
   }
 
+  .release-card__status,
+  .release-card__artist,
+  .release-card__genres li,
+  .release-card__metrics strong {
+    animation: accent-prism-glow 9s ease-in-out infinite;
+  }
+
   .release-card__artist {
     margin: clamp(17px, 2.4vh, 30px) 0 3px;
     color: var(--release-accent);
@@ -230,6 +257,25 @@ const paletteStyle = [
     margin: 0 0 clamp(13px, 1.8vh, 22px);
     border-top: 1px solid color-mix(in srgb, var(--release-accent), transparent 72%);
     border-bottom: 1px solid color-mix(in srgb, var(--release-accent), transparent 72%);
+  }
+
+  .release-card__genres {
+    display: flex;
+    padding: 0;
+    margin: 0 0 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+  }
+
+  .release-card__genres li {
+    padding: 5px 8px;
+    border: 1px solid color-mix(in srgb, var(--release-accent), transparent 65%);
+    background: color-mix(in srgb, var(--release-accent), transparent 91%);
+    color: color-mix(in srgb, var(--release-accent), var(--release-fg) 22%);
+    font-size: 8px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
   }
 
   .release-card__meta div {
@@ -283,6 +329,11 @@ const paletteStyle = [
     font-size: 25px;
   }
 
+  .release-card__metrics [data-total-metric] {
+    border-color: color-mix(in srgb, var(--release-accent), transparent 42%);
+    background: color-mix(in srgb, var(--release-accent), transparent 91%);
+  }
+
   .release-card__links :global(.button-link)::before {
     color: var(--release-accent);
   }
@@ -331,6 +382,10 @@ const paletteStyle = [
 
     .release-card__meta div:not(:last-child) {
       border-bottom: 1px dotted color-mix(in srgb, var(--release-accent), transparent 75%);
+    }
+
+    .release-card__metrics [data-platform-metric] {
+      display: none;
     }
   }
 </style>

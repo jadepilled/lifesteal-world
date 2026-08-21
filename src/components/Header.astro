@@ -1,5 +1,6 @@
 ---
 import { withBase } from '../lib/base';
+import figlet from 'figlet';
 
 const pathname = Astro.url.pathname;
 const navigation = [
@@ -9,16 +10,21 @@ const navigation = [
   { href: '/store/', label: 'store' },
   { href: '/about/', label: 'about' },
 ];
+const asciiMark = figlet
+  .textSync('lifesteal', {
+    font: 'Small Slant',
+    horizontalLayout: 'fitted',
+    verticalLayout: 'fitted',
+  })
+  .trimEnd();
 ---
 
 <header class="site-header">
   <div class="site-header__inner">
-    <a
-      class="wordmark prism-text"
-      href={withBase('/')}
-      aria-label="lifesteal home"
-      data-text="lifesteal">lifesteal</a
-    >
+    <a class="wordmark prism-hover" href={withBase('/')} aria-label="lifesteal home">
+      <pre class="wordmark__base" aria-hidden="true">{asciiMark}</pre>
+      <pre class="wordmark__prism" aria-hidden="true">{asciiMark}</pre>
+    </a>
 
     <nav class="site-nav" aria-label="Primary navigation">
       <span class="site-nav__prompt" aria-hidden="true">&gt;</span>
@@ -27,10 +33,14 @@ const navigation = [
           navigation.map((item) => (
             <li>
               <a
+                class="prism-hover"
                 href={withBase(item.href)}
                 aria-current={pathname.startsWith(withBase(item.href)) ? 'page' : undefined}
               >
-                {item.label}
+                <span class="site-nav__label">{item.label}</span>
+                <span class="site-nav__prism" aria-hidden="true">
+                  {item.label}
+                </span>
               </a>
             </li>
           ))
@@ -41,6 +51,26 @@ const navigation = [
 </header>
 
 <script>
+  const runPrism = (element: HTMLElement) => {
+    element.classList.remove('prism-hover--run');
+    void element.offsetWidth;
+    element.classList.add('prism-hover--run');
+  };
+
+  const bindPrisms = () => {
+    document.querySelectorAll<HTMLElement>('.site-header .prism-hover').forEach((element) => {
+      if (element.dataset.prismBound === 'true') return;
+      element.dataset.prismBound = 'true';
+      element.addEventListener('pointerenter', () => runPrism(element));
+      element.addEventListener('focus', () => runPrism(element));
+      element.addEventListener('animationend', (event) => {
+        if ((event as AnimationEvent).animationName === 'header-prism') {
+          element.classList.remove('prism-hover--run');
+        }
+      });
+    });
+  };
+
   const updateCurrentPage = () => {
     const current = new URL(window.location.href).pathname;
     document.querySelectorAll<HTMLAnchorElement>('.site-nav a').forEach((link) => {
@@ -48,6 +78,7 @@ const navigation = [
       link.toggleAttribute('aria-current', current.startsWith(path));
       if (link.hasAttribute('aria-current')) link.setAttribute('aria-current', 'page');
     });
+    bindPrisms();
   };
 
   document.addEventListener('astro:page-load', updateCurrentPage);

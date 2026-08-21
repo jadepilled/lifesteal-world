@@ -1,7 +1,8 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
-const githubPages = process.env.GITHUB_PAGES === 'true';
+const customDomain = process.env.CUSTOM_DOMAIN === 'true';
+const githubPages = process.env.GITHUB_PAGES === 'true' && !customDomain;
 
 export default defineConfig({
   site: githubPages ? 'https://jadepilled.github.io/lifesteal-world' : 'https://lifesteal.world',

@@ -25,6 +25,11 @@
     },
     "spotifyArtistId": null,
     "soundcloudProfileUrl": "https://soundcloud.com/hazelmere/",
+    "metricsSnapshot": {
+      "soundcloudFollowers": 443,
+      "spotifyMonthlyListeners": null,
+      "asOf": "2026-08-21T05:30:00.000Z"
+    },
     "links": [
       {
         "label": "Instagram",
@@ -60,6 +65,11 @@
     },
     "spotifyArtistId": "4MkRcUXF9bFAN8mxl8Cc7h",
     "soundcloudProfileUrl": "https://soundcloud.com/starstrike/",
+    "metricsSnapshot": {
+      "soundcloudFollowers": 3,
+      "spotifyMonthlyListeners": 30,
+      "asOf": "2026-08-21T05:30:00.000Z"
+    },
     "links": [
       {
         "label": "SoundCloud",
@@ -70,6 +80,16 @@
         "label": "Spotify",
         "platform": "spotify",
         "url": "https://open.spotify.com/artist/4MkRcUXF9bFAN8mxl8Cc7h"
+      },
+      {
+        "label": "YouTube Music",
+        "platform": "youtube-music",
+        "url": "https://music.youtube.com/channel/UCmpyVFiDWmDzbtjOAS4U9kw"
+      },
+      {
+        "label": "TIDAL",
+        "platform": "tidal",
+        "url": "https://listen.tidal.com/search?q=starstrike"
       }
     ]
   }

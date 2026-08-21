@@ -6,11 +6,12 @@
     "artistIds": ["hazelmere"],
     "album": "AUDIOCLUB",
     "releaseType": "single",
+    "genres": ["Hardtekk", "Hardstyle", "Hard Techno", "Electronic"],
     "status": "upcoming",
     "releaseDate": "2026-09-25",
     "durationMs": null,
     "isrc": null,
-    "biography": "A high-impact transmission from HAZELMERE: clipped signal, body-moving pressure, and the exhilaration of a system pushed just past its limit.",
+    "biography": "HAZELMERE delivers with her intense, broody rendition of ROI by VIDEOCLUB. Dark, pulsating kicks paired with nostalgic sampling and heavy downsampling bring an unmistakable anger to this otherwise extremely catchy track.",
     "artwork": {
       "src": "/assets/releases/audioclub-cover.webp",
       "alt": "AUDIOCLUB cover with red repeated type and monochrome figures",
@@ -58,11 +59,12 @@
     "artistIds": ["hazelmere"],
     "album": "LIFE IS BEAUTIFUL",
     "releaseType": "single",
+    "genres": ["Euphoric Hardstyle", "Hardstyle", "Hypertrance"],
     "status": "upcoming",
     "releaseDate": "2026-10-02",
     "durationMs": 158000,
     "isrc": null,
-    "biography": "Euphoria rendered at full intensity: a bright, sentimental melody held against the physical force of HAZELMERE’s harder club language.",
+    "biography": "LIFE IS BEAUTIFUL is an ode to distortion, with euphoric leads tearing through the mix to settle atop huge classic hardstyle kicks. Taking inspiration from classic and modern euphoric hardstyle, LIFE IS BEAUTIFUL is an aggressive, dynamic journey through an overdriven dream.",
     "artwork": {
       "src": "/assets/releases/life-is-beautiful-cover.webp",
       "alt": "LIFE IS BEAUTIFUL cover with a black thorn-like mark over a pink sky",
@@ -110,6 +112,7 @@
     "artistIds": ["starstrike"],
     "album": "song of the seas",
     "releaseType": "single",
+    "genres": ["Hyperpop", "Piratecore", "Digicore"],
     "status": "released",
     "releaseDate": "2022-04-18",
     "durationMs": 184529,
@@ -157,6 +160,7 @@
     "artistIds": ["starstrike"],
     "album": "shut up n kiss me",
     "releaseType": "single",
+    "genres": ["Hyperpop", "Hyperrock", "Emo"],
     "status": "released",
     "releaseDate": "2022-08-25",
     "durationMs": 147513,
@@ -204,6 +208,7 @@
     "artistIds": ["starstrike"],
     "album": "starwrld",
     "releaseType": "single",
+    "genres": ["Scenecore", "Eurodance", "Happy Hardcore"],
     "status": "released",
     "releaseDate": "2022-07-04",
     "durationMs": 143125,
@@ -251,11 +256,12 @@
     "artistIds": ["hazelmere"],
     "album": "NEVERGUESSED",
     "releaseType": "single",
+    "genres": ["Hardtekk", "Hardstyle", "Scenecore"],
     "status": "released",
     "releaseDate": "2026-07-28",
     "durationMs": 116318,
     "isrc": null,
-    "biography": "HAZELMERE folds a restless, high-speed electronic arrangement around a sharply melodic core, balancing emotional lift with deliberate overload.",
+    "biography": "Featuring vocals by hyperpop legend Capoxxo, NEVERGUESSED is a fun hardtekk flip of a track HAZELMERE couldn't get out of her head while traveling.",
     "artwork": {
       "src": "/assets/releases/hazelmere-neverguessed.webp",
       "alt": "Cover artwork for NEVERGUESSED by HAZELMERE",
@@ -298,6 +304,7 @@
     "artistIds": ["starstrike"],
     "album": "katana",
     "releaseType": "single",
+    "genres": ["Hyperpop", "Drum & Bass", "Breakcore"],
     "status": "released",
     "releaseDate": "2022-11-04",
     "durationMs": 149002,
@@ -345,6 +352,7 @@
     "artistIds": ["starstrike"],
     "album": "echoes of hoenn",
     "releaseType": "single",
+    "genres": ["Hyperpop", "Digicore", "Glitchcore"],
     "status": "released",
     "releaseDate": "2022-07-23",
     "durationMs": 79412,
@@ -392,6 +400,7 @@
     "artistIds": ["starstrike"],
     "album": "the one that got away",
     "releaseType": "single",
+    "genres": ["Hyperpop", "Rave", "Eurodance"],
     "status": "released",
     "releaseDate": "2022-04-03",
     "durationMs": 121182,
@@ -419,6 +428,15 @@
         "platform": "soundcloud",
         "url": "https://soundcloud.com/hazelmere/the-one-that-got-away",
         "platformId": "1243602877"
+      },
+      {
+        "platform": "youtube-music",
+        "url": "https://music.youtube.com/watch?v=sJ7VG7TkYf4",
+        "platformId": "sJ7VG7TkYf4"
+      },
+      {
+        "platform": "tidal",
+        "url": "https://listen.tidal.com/search?q=starstrike%20the%20one%20that%20got%20away"
       }
     ],
     "metrics": [
@@ -449,6 +467,7 @@
     "artistIds": ["starstrike"],
     "album": "internet depression club!!! >__<",
     "releaseType": "single",
+    "genres": ["Hyperpop", "Digicore", "Glitchcore"],
     "status": "released",
     "releaseDate": "2022-01-20",
     "durationMs": 124996,
@@ -476,6 +495,15 @@
         "platform": "soundcloud",
         "url": "https://soundcloud.com/hazelmere/internet-depression-club",
         "platformId": "1199892184"
+      },
+      {
+        "platform": "youtube-music",
+        "url": "https://music.youtube.com/watch?v=I0N2oa4ekfE",
+        "platformId": "I0N2oa4ekfE"
+      },
+      {
+        "platform": "tidal",
+        "url": "https://listen.tidal.com/search?q=starstrike%20internet%20depression%20club"
       }
     ],
     "metrics": [
@@ -506,6 +534,7 @@
     "artistIds": ["starstrike"],
     "album": "flow",
     "releaseType": "single",
+    "genres": ["Hyperpop", "Digicore"],
     "status": "released",
     "releaseDate": "2022-03-31",
     "durationMs": null,
@@ -528,6 +557,15 @@
         "platform": "spotify",
         "url": "https://open.spotify.com/track/0fEazO7AwSWNHOu0NoriiO",
         "platformId": "0fEazO7AwSWNHOu0NoriiO"
+      },
+      {
+        "platform": "youtube-music",
+        "url": "https://music.youtube.com/watch?v=a_QWLMCf3cQ",
+        "platformId": "a_QWLMCf3cQ"
+      },
+      {
+        "platform": "tidal",
+        "url": "https://listen.tidal.com/search?q=starstrike%20flow"
       }
     ],
     "metrics": [],

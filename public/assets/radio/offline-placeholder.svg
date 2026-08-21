@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-labelledby="title desc">
+  <title id="title">LIFESTEAL stream offline</title>
+  <desc id="desc">A black terminal-style placeholder with an inactive green signal trace.</desc>
+  <rect width="1080" height="1080" fill="#020403"/>
+  <g fill="none" stroke="#2de37b" opacity=".22">
+    <path d="M0 180h1080M0 360h1080M0 540h1080M0 720h1080M0 900h1080"/>
+    <path d="M180 0v1080M360 0v1080M540 0v1080M720 0v1080M900 0v1080"/>
+  </g>
+  <path d="M95 540h255l40-82 58 180 74-306 72 402 60-194h331" fill="none" stroke="#2de37b" stroke-width="8" opacity=".72"/>
+  <path d="M95 540h255l40-82 58 180 74-306 72 402 60-194h331" fill="none" stroke="#2de37b" stroke-width="30" opacity=".08"/>
+  <g fill="#dfffe8" font-family="monospace" text-anchor="middle">
+    <text x="540" y="875" font-size="42" letter-spacing="8">NO MEDIA LOADED</text>
+    <text x="540" y="930" fill="#2de37b" font-size="24" letter-spacing="5">BROADCAST NOT AVAILABLE</text>
+  </g>
+</svg>

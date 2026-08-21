@@ -33,6 +33,8 @@ describe('checked-in content', () => {
     expect(internetDepressionClub?.links.map((link) => link.platform).sort()).toEqual([
       'soundcloud',
       'spotify',
+      'tidal',
+      'youtube-music',
     ]);
   });
 

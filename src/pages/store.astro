@@ -80,6 +80,7 @@ import { withBase } from '../lib/base';
   }
 
   .store-item {
+    --accent: var(--item-accent);
     position: relative;
     display: grid;
     min-height: 0;
@@ -109,6 +110,7 @@ import { withBase } from '../lib/base';
 
   .store-item__register span:last-child {
     color: var(--item-accent);
+    animation: accent-prism-glow 9s ease-in-out infinite;
   }
 
   .store-item__artwork {
@@ -129,6 +131,7 @@ import { withBase } from '../lib/base';
     color: var(--item-accent);
     font-size: 11px;
     letter-spacing: 0.12em;
+    animation: accent-prism-glow 9s ease-in-out infinite;
   }
 
   .store-item__copy > p:last-of-type {
@@ -156,6 +159,7 @@ import { withBase } from '../lib/base';
   .store-item__action::after {
     color: var(--item-accent);
     content: '[>]';
+    animation: accent-prism-glow 9s ease-in-out infinite;
   }
 
   .store-item__action[aria-disabled='true'] {

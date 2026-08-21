@@ -79,6 +79,7 @@ const metricsEndpoint =
 
 <script>
   import { setupSnapGallery } from '../lib/snap-gallery';
+  import { formatCount } from '../lib/format';
 
   type LiveMetric = {
     canonicalId: string;
@@ -117,14 +118,41 @@ const metricsEndpoint =
     if (label) label.textContent = metricLabel(metric);
     if (value) {
       value.textContent =
-        metric.kind === 'popularity'
-          ? `${metric.value}/100`
-          : new Intl.NumberFormat('en-AU').format(metric.value);
+        metric.kind === 'popularity' ? `${metric.value}/100` : formatCount(metric.value);
     }
     if (date) {
       date.textContent = `AS OF ${new Date(metric.asOf).toLocaleDateString('en-AU')}`;
     }
     list.hidden = false;
+  };
+
+  const updateReleaseTotals = (metrics: LiveMetric[]) => {
+    const grouped = new Map<string, LiveMetric[]>();
+    metrics
+      .filter((metric) => metric.kind === 'plays')
+      .forEach((metric) =>
+        grouped.set(metric.canonicalId, [...(grouped.get(metric.canonicalId) ?? []), metric]),
+      );
+    grouped.forEach((playMetrics, canonicalId) => {
+      const release = document.querySelector<HTMLElement>(
+        `[data-release-id="${CSS.escape(canonicalId)}"]`,
+      );
+      const list = release?.querySelector<HTMLUListElement>('[data-release-metrics]');
+      const totalItem = list?.querySelector<HTMLLIElement>('[data-total-metric]');
+      if (!list || !totalItem) return;
+      const total = playMetrics.reduce((sum, metric) => sum + metric.value, 0);
+      const latest = playMetrics
+        .map((metric) => metric.asOf)
+        .sort()
+        .at(-1);
+      const value = totalItem.querySelector<HTMLElement>('[data-total-metric-value]');
+      const date = totalItem.querySelector<HTMLElement>('[data-total-metric-date]');
+      if (value) value.textContent = formatCount(total);
+      if (date && latest)
+        date.textContent = `AS OF ${new Date(latest).toLocaleDateString('en-AU')}`;
+      totalItem.hidden = false;
+      list.hidden = false;
+    });
   };
 
   const hydrateMetrics = async (gallery: HTMLElement) => {
@@ -137,6 +165,7 @@ const metricsEndpoint =
       if (!response.ok) return;
       const payload = (await response.json()) as { metrics?: LiveMetric[] };
       payload.metrics?.forEach(updateMetric);
+      updateReleaseTotals(payload.metrics ?? []);
     } catch {
       // Static, timestamped values remain visible whenever the live endpoint is unavailable.
     }
